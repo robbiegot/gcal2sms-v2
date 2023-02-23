@@ -22,7 +22,6 @@ const Post: React.FC<{ post: PostProps }> = ({ post }) => {
       <ReactMarkdown children={post.content} />
       <style jsx>{`
         div {
-          color: inherit;
           padding: 2rem;
         }
       `}</style>
