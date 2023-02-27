@@ -7,17 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String  @map("provider_account_id")
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+  oauth_token_secret String?
+  oauth_token        String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  passwordHash  String  
-  firstName     String? 
-  lastName      String? 
+  name          String?
   userToken     String?
   defRmndrStr   String?   @default("you have an upcoming appointment")
-  defRmndrTime  DateTime
+  defRmndrTime  Int       @default(36)
   phoneNumber   Int?
-  lastLogin     DateTime 
+  lastLogin     DateTime  @default(now())
   createdAt     DateTime  @default(now()) @map(name: "created_at")
   updatedAt     DateTime  @updatedAt @map(name: "updated_at")
   emailVerified DateTime?
@@ -26,6 +45,7 @@ model User {
   sessions      Session[]
   calendar      Calendar[]
   contacts      Contact[]
+  @@map("users")
 }
 
 model Calendar {
@@ -39,13 +59,14 @@ model Calendar {
   events      Event[]
   createdAt   DateTime  @default(now()) @map(name: "created_at")
   updatedAt   DateTime  @updatedAt @map(name: "updated_at")
+  
 }
 
 model Event {
   id              String    @id @default(cuid())
-  googleID        String  
-  calendar        Calendar  @relation(fields: [calendarID], references: [id])
-  calendarID      String
+  googleId        String  
+  calendar        Calendar  @relation(fields: [calendarId], references: [id])
+  calendarId      String
   status          String?
   htmlLink        String?
   created         DateTime
@@ -65,8 +86,8 @@ model Reminder {
   timeToSend  DateTime 
   rmdrType    String? 
   rmdrText    String
-  event       Event    @relation(fields: [eventID], references: [id])
-  eventID     String       
+  event       Event    @relation(fields: [eventId], references: [id])
+  eventId     String       
   attendees   ContactsOnReminders[]
   ReadyToSend Boolean
   sent        Boolean  @default(false)
@@ -75,11 +96,9 @@ model Reminder {
 
 model Contact {
   id            String    @id @default(cuid())
-  firstName     String?
-  lastName      String?
   email         String    @unique
-  userOwner     User      @relation(fields: [userOwnerID], references: [id])
-  userOwnerID   String       
+  userOwner     User      @relation(fields: [userOwnerId], references: [id])
+  userOwnerId   String       
   Reminder      ContactsOnReminders[]
   phoneNumber   Int       @unique
   sendReminders Boolean   @default(true)
@@ -90,52 +109,32 @@ model Contact {
 }
 
 model ContactsOnReminders {
-  reminder       Reminder @relation(fields: [reminderID], references: [id])
-  reminderID     String
-  contact        Contact  @relation(fields: [contactID], references: [id])
-  contactID      String 
+  reminder       Reminder @relation(fields: [reminderId], references: [id])
+  reminderId     String
+  contact        Contact  @relation(fields: [contactId], references: [id])
+  contactId      String 
 
   
-  @@id([reminderID, contactID])
+  @@id([reminderId, contactId])
 }
 
 model ContactsOnEvents {
-  event       Event  @relation(fields: [eventID], references: [id])
-  eventID     String
-  contact     Contact   @relation(fields: [contactID], references: [id])
-  contactID   String 
+  event       Event  @relation(fields: [eventId], references: [id])
+  eventId     String
+  contact     Contact   @relation(fields: [contactId], references: [id])
+  contactId   String 
 
-  
-  @@id([eventID, contactID])
-}
-
-model Account {
-  id                 String  @id @default(cuid())
-  userId             String  @map("user_id")
-  type               String
-  provider           String
-  providerAccountId  String  @map("provider_account_id")
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
-  oauth_token_secret String?
-  oauth_token        String?
-
-  user User @relation(fields:[userId], references:[id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  @@id([eventId, contactId])
 }
 
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique@map("session_token")
-  userId       String   @map("user_id")
+  sessionToken String   @unique @map("session_token")
+  userId       String
   expires      DateTime
-  user         User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
 model VerificationToken {
@@ -145,4 +144,6 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@map("verificationtokens")
+
 }

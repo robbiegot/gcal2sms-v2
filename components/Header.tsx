@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { signOut, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import {
   AppBar, 
   Box, 
@@ -16,16 +16,32 @@ import {
   MenuItem, 
   Dialog, 
   DialogContentText, 
-  DialogTitle
+  DialogTitle,
 } from '@mui/material'
 import AdbIcon from '@mui/icons-material/Adb';
 import MenuIcon from '@mui/icons-material/Menu';
+import GoogleIcon from '@mui/icons-material/Google';
 
 const pages = ['Products', 'Pricing', 'Blog'];
-const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
+const settings = ['Profile', 'Account', 'Dashboard', 'Logout']; 
+
+
 
 const Header = () => {
   const router = useRouter();
+
+  const fetchCalData = async () => {
+    try {
+      const req = await fetch('/api/get-google-data');
+      const newData = await req.json();
+      console.log(newData.results);
+      return;
+    } catch(error) {
+      console.log(error)
+    }
+
+  };
+
 
   const isActive: (pathname: string) => boolean = (pathname) => (router.pathname === pathname);
 
@@ -55,10 +71,6 @@ const Header = () => {
     };
 
     //reminder that this is not yet complete
-    const logout = ():void => {
-      return; 
-    }
-
   
   if (status === 'loading') {
     const right = (
@@ -161,6 +173,7 @@ const Header = () => {
         </Box>
         {session &&
            <Box sx={{ flexGrow: 0 }}>
+            <Button onClick={() => fetchCalData()}>Get Calendar Data</Button>
            <Tooltip title="Open settings">
              <IconButton 
              onClick={handleOpenUserMenu} 
@@ -188,7 +201,7 @@ const Header = () => {
                if (setting === 'Logout') {
                  return (
                    <MenuItem key={setting} 
-                   onClick={logout}
+                   onClick={() => signOut()}
                    >
                      <Typography textAlign="center">{setting}</Typography>
                    </MenuItem>
@@ -208,14 +221,17 @@ const Header = () => {
         {!session &&
           <Box sx={{ flexGrow: 0 }}>
             <div>
-              <Button
-                aria-haspopup="true"
-                color='secondary'
-                variant="contained"
-                onClick={handleOpenSignupMenu}
-              >
-                Sign Up!
-              </Button>
+              <Link href="/api/auth/signin">
+                <Button
+                  aria-haspopup="true"
+                  color='secondary'
+                  variant="contained"
+                  onClick={() => signIn()}
+                  startIcon={<GoogleIcon />}
+                >
+                  Login With Your Google Account
+                </Button>
+              </Link >
                 <Dialog open={anchorElSignup} onClose={handleCloseSignupMenu}>
                   <DialogTitle>Please Login with Your Google Acount</DialogTitle>
                   <Button>Authorize Goggle Account</Button>

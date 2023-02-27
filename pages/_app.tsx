@@ -18,14 +18,14 @@ const App: React.FunctionComponent<MyAppProps> = (props) => {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
 
   return (
-    <SessionProvider session={pageProps.session}>
+    <ThemeProvider theme={theme}>
       <CacheProvider value={emotionCache}>
-        <ThemeProvider theme={theme}>
+        <SessionProvider session={pageProps.session}>
           <CssBaseline />
           <Component {...pageProps} />
-        </ThemeProvider>
-      </CacheProvider>
-    </SessionProvider>
+        </SessionProvider>
+    </CacheProvider>
+    </ThemeProvider>
   );
 };
 
