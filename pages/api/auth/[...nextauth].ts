@@ -87,7 +87,7 @@ if (ErrorGoogleEnv) {
             clientSecret: GOOGLE_CLIENT_SECRET!,
             accessTokenUrl: GOOGLE_AUTHORIZATION_URL,
             authorization: {
-                params: { 
+                params: {
                     access_type: 'offline',
                     scope: "https://www.googleapis.com/auth/calendar.readonly openid profile email",
                 },
@@ -116,28 +116,28 @@ export const authOptions: NextAuthOptions = {
         secret: process.env.NEXTAUTH_SECRET,
     },
     callbacks: {
-        async session({ session, token, user }: any) {
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - token", token)
+        async session({ session, token, user, account }: any) {
+            // console.log("🚀 - file: [...nextauth].ts - line 113 - session - token", token)
             console.log("🚀 - file: [...nextauth].ts - line 113 - session - user", user)
             console.log("🚀 - file: [...nextauth].ts - line 113 - session - session", session)
             session.jwt = user.jwt
             session.id = user.id
+            session.user.calendar = user.calendar
             return session
         },
         async jwt({ token, user, account }: any) {
             const isSignIn = user && account ? true : false
             if (isSignIn) {
                 const response = await fetch(
-                    `${process.env.GOOGLE_AUTHORIZATION_URL}/api/auth/${account!.provider}/callback?access_token=${
-                        account!?.access_token
+                    `${process.env.GOOGLE_AUTHORIZATION_URL}/api/auth/${account!.provider}/callback?access_token=${account!?.access_token
                     }`
                 )
                 const data = await response.json()
                 console.log('🚀 - file: [...nextauth].ts - line 127 - jwt - data', data)
-                ;(token.access_token = account!.access_token),
-                    (token.accessTokenExpires = account!.expires_in!),
-                    (token.refreshToken = account!.refresh_token),
-                    (token.jwt = data.jwt)
+                    ; (token.access_token = account!.access_token),
+                        (token.accessTokenExpires = account!.expires_in!),
+                        (token.refreshToken = account!.refresh_token),
+                        (token.jwt = data.jwt)
                 token.access_token = account.access_token
                 token.id = data.user.id
                 console.log("this is token and data", data, token)

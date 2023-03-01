@@ -9,7 +9,6 @@ type Props = {
 const Layout: React.FC<Props> = (props) => (
   <div>
     <Header />
-    <Calendar />
     <div className="layout">{props.children}</div>
   </div>
 );

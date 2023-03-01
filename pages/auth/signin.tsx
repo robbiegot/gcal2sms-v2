@@ -15,9 +15,12 @@ import Link from '@mui/joy/Link';
 import GoogleButton from "react-google-button"
 import { Container, ThemeProvider } from "@mui/system"
 import theme from "../../styles/theme"
+import Header from "../../components/Header"
 
 export default function SignInButton({props, theme}) {
   return (
+    <>
+    <Header/>
     <CssVarsProvider>
       <Sheet 
       variant="outlined"
@@ -82,5 +85,6 @@ export default function SignInButton({props, theme}) {
 </Typography>
         </Sheet>
     </CssVarsProvider>
+    </>
   );
 }

@@ -1,0 +1,11 @@
+import { getSession } from 'next-auth/react';
+import prisma from '../../lib/prisma';
+
+
+export default function handler(req, res) {
+    if (req.method === 'POST') {
+        ///send to database
+        return
+    }
+}
+

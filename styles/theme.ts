@@ -2,7 +2,7 @@ import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: 'light',
     primary: {
       main: '#ffffff',
       contrastText: '#011e2d',
@@ -63,12 +63,12 @@ const theme = createTheme({
     },
     MuiButton: {
       defaultProps: {
-        color:'secondary'
+        color: 'secondary'
       }
     },
     MuiButtonGroup: {
       defaultProps: {
-        color:'secondary'
+        color: 'secondary'
       }
     }
   },
