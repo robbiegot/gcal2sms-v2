@@ -37,6 +37,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             calendar: true
         }
     });
+
     const readOnlyVals = {};
     const newReadOnly = Object.keys(account).forEach((key) => {
         readOnlyVals[key] = true;
@@ -69,13 +70,14 @@ const Settings: React.FC<Props> = ({ account, readOnlyVals }) => {
 
     const [readOnlyTriggers, setReadOnlyTriggers] = useState(readOnlyVals);
 
-    const submitData = async (e, { componentName: textSubmission }) => {
+    const submitData = async (e, componentName: String, textSubmission: String) => {
         e.preventDefault();
         try {
             const body = {
-                componentName: textSubmission
+                componentName: componentName,
+                textSubmission: textSubmission
             };
-            await fetch('/api/settings', {
+            await fetch('/api/settings-API', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -92,7 +94,6 @@ const Settings: React.FC<Props> = ({ account, readOnlyVals }) => {
         newReadOnlyVals[key] = newTrig;
 
         setReadOnlyTriggers(newReadOnlyVals)
-        console.log(newReadOnlyVals)
         return
 
     };

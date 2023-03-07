@@ -156,7 +156,7 @@ export const authOptions: NextAuthOptions = {
             )
         },
     },
-    debug: true,
+    debug: false,
 }
 
 export default (req: NextApiRequest, res: NextApiResponse) => NextAuth(req, res, authOptions)

@@ -9,7 +9,7 @@ import styles from '../styles/styles.module.css'
 
 const clientSideEmotionCache = createEmotionCache();
 
-interface MyAppProps extends AppProps<{ session : Session }> {
+interface MyAppProps extends AppProps<{ session: Session }> {
   emotionCache?: EmotionCache;
 }
 
@@ -24,7 +24,7 @@ const App: React.FunctionComponent<MyAppProps> = (props) => {
           <CssBaseline />
           <Component {...pageProps} />
         </SessionProvider>
-    </CacheProvider>
+      </CacheProvider>
     </ThemeProvider>
   );
 };

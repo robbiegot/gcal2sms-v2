@@ -1,78 +1,62 @@
-import Header from "../components/Header";
-import React, { useState, useEffect } from "react";
-import { useTheme } from "@mui/system";
+import React, { useRef, useState, useEffect, EventHandler, FormEvent } from "react";
 import {
     TextField,
     Button,
-    FormGroup,
     InputAdornment,
+    FormGroup,
 } from '@mui/material';
-import { useSession, signIn } from "next-auth/react";
-import { TransitionProps } from "@mui/material/transitions";
+
 
 const SettingsTextField = ({ componentName, readOnlyVal, handleReadOnlyChange, initialValue, submitData }) => {
-
-    const [textSubmission, setTextSubmission] = useState(initialValue);
-
-    const submitTextField = (e, { componentName: textSubmission }) => {
-        if (!readOnlyVal && textSubmission !== initialValue) {
-            submitData({ componentName: textSubmission })
-            handleReadOnlyChange(componentName);
-            return;
-        }
-        handleReadOnlyChange(componentName);
-    };
-
-    const onChange = (e) => {
-        setTextSubmission(e.target.value);
-    };
-
-    const cancelTextField = () => {
-        handleReadOnlyChange(componentName)
-    };
+    const inputRef = useRef(componentName);
 
     return (
-        <FormGroup>
-            <TextField
-                autoFocus
-                margin="dense"
-                id={componentName}
-                label={componentName}
-                disabled={readOnlyVal}
-                variant={readOnlyVal ? 'filled' : 'outlined'}
-                defaultValue={initialValue ? initialValue : ''}
-                onChange={(e) => onChange(e)}
-                InputProps={{
-                    readOnly: readOnlyVal,
-                    endAdornment: (
-                        <InputAdornment position="end">
+        <TextField
+            autoFocus
+            margin="dense"
+            type='text'
+            inputRef={inputRef}
+            id={componentName}
+            label={componentName}
+            disabled={readOnlyVal}
+            variant={readOnlyVal ? 'filled' : 'outlined'}
+            defaultValue={initialValue ? initialValue : ''}
+            InputProps={{
+                readOnly: readOnlyVal,
+                endAdornment: (
+                    <InputAdornment position="end">
+                        <Button
+                            onClick={(e) => {
+                                if (!readOnlyVal && inputRef.current.value !== initialValue) {
+                                    console.log("hello", inputRef)
+                                    submitData(e, componentName, inputRef.current.value)
+                                };
+                                handleReadOnlyChange(componentName);
+                            }}
+                            type="submit"
+                            variant="contained">
+                            {readOnlyVal ? 'Click To Edit' : 'Submit Change'}
+                        </Button>
+                        {!readOnlyVal &&
                             <Button
-                                onClick={() => submitTextField({ componentName: textSubmission })}
-                                type="submit"
-                                variant="contained">
-                                {readOnlyVal ? 'Click To Edit' : 'Submit Change'}
+                                onClick={() => handleReadOnlyChange(componentName)}
+                                type="button"
+                                variant="contained"
+                                color='warning'
+                                sx={{ ml: '10px' }}
+                            >
+                                Cancel
                             </Button>
-                            {!readOnlyVal &&
-                                <Button
-                                    onClick={cancelTextField}
-                                    type="button"
-                                    variant="contained"
-                                    color='warning'
-                                    sx={{ ml: '10px' }}
-                                >
-                                    Cancel
-                                </Button>
-                            }
-                        </InputAdornment>
-                    ),
-                }}
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
+                        }
+                    </InputAdornment >
+                ),
+            }}
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+        />
 
-            />
-        </FormGroup>
     )
 }
 
