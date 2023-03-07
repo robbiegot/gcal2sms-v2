@@ -93,7 +93,7 @@ if (ErrorGoogleEnv) {
                 },
             },
             profile(profile: any) {
-                console.log('🚀 - file: [...nextauth].ts - line 92 - profile - profile', profile)
+                // console.log('🚀 - file: [...nextauth].ts - line 92 - profile - profile', profile)
                 return {
                     id: profile.sub,
                     name: profile.name,
@@ -118,8 +118,8 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async session({ session, token, user, account }: any) {
             // console.log("🚀 - file: [...nextauth].ts - line 113 - session - token", token)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - user", user)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - session", session)
+            // console.log("🚀 - file: [...nextauth].ts - line 113 - session - user", user)
+            // console.log("🚀 - file: [...nextauth].ts - line 113 - session - session", session)
             session.jwt = user.jwt
             session.id = user.id
             session.user.calendar = user.calendar
@@ -133,14 +133,14 @@ export const authOptions: NextAuthOptions = {
                     }`
                 )
                 const data = await response.json()
-                console.log('🚀 - file: [...nextauth].ts - line 127 - jwt - data', data)
+                    // console.log('🚀 - file: [...nextauth].ts - line 127 - jwt - data', data)
                     ; (token.access_token = account!.access_token),
                         (token.accessTokenExpires = account!.expires_in!),
                         (token.refreshToken = account!.refresh_token),
                         (token.jwt = data.jwt)
                 token.access_token = account.access_token
                 token.id = data.user.id
-                console.log("this is token and data", data, token)
+                // console.log("this is token and data", data, token)
             }
 
             // Return previous token if the access token has not expired yet
