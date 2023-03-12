@@ -8,7 +8,6 @@ import Calendar from "../components/Calendar";
 const Blog: React.FC = (props) => {
   return (
     <Layout>
-      <Calendar />
     </Layout>
   )
 }

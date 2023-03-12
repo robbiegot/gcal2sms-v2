@@ -10,6 +10,20 @@ declare module "next-auth" {
     accessToken: JWT,
     error: String | buffer,
   }
+} interface AuthToken {
+  user: User
+  accessToken: string
+  accessTokenExpires?: number
+  expires_at?: number
+  refreshToken: string
+  error?: string
 }
+
+interface JwtInterface {
+  token: AuthToken
+  user: User
+  account: GenericObject
+}
+
 
 

@@ -27,7 +27,6 @@ const pages = ['Products', 'Pricing', 'Blog'];
 const settings = ['Home', 'Settings', 'Account', 'Logout'];
 
 
-
 const Header = () => {
   const theme = useTheme()
   const router = useRouter();

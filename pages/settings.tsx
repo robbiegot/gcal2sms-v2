@@ -5,7 +5,6 @@ import { GetServerSideProps } from 'next';
 import prisma from '../lib/prisma';
 import SettingsTextField from "../components/SettingsText";
 import { TransitionProps } from "@mui/material/transitions";
-import { useTheme } from "@mui/system";
 import { Account } from "@prisma/client";
 import { useRouter } from 'next/router';
 import {
@@ -16,8 +15,6 @@ import {
     FormGroup,
 } from '@mui/material';
 
-
-
 const Slider = React.forwardRef(function Transition(
     props: TransitionProps & {
         children: React.ReactElement<any, any>;
@@ -27,42 +24,36 @@ const Slider = React.forwardRef(function Transition(
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-
-
 const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionStatusVals }) => {
     const { data: session, status } = useSession();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [readOnlyTriggers, setReadOnlyTriggers] = useState(readOnlyVals);
+    const [submissionStatus, setSubmissionStatus] = useState(submissionStatusVals)
     const router = useRouter();
 
     //functionality to reload data when a field has been changed
-    const [isRefreshing, setIsRefreshing] = React.useState(false);
+
     const refreshData = () => {
         router.replace(router.asPath);
         setIsRefreshing(true);
     };
-    React.useEffect(() => {
+
+    useEffect(() => {
         setIsRefreshing(false);
     }, [accountSettings]);
 
-    const [readOnlyTriggers, setReadOnlyTriggers] = useState(readOnlyVals);
-    const [submissionStatus, setSubmissionStatus] = useState(submissionStatusVals)
 
     const submitData = async (e, componentName: string, textSubmission: string) => {
         e.preventDefault();
         try {
-            const body = {
-                componentName: componentName,
-                textSubmission: textSubmission
-            };
-            const updatedUser = await fetch('/api/settings-API', {
+            const bodyToSend = (componentName === 'calendar') ? JSON.stringify({ calendarID: textSubmission }) : JSON.stringify({ componentName, textSubmission });
+            const updatedUser = await fetch(`/api/settings-API/${componentName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
+                body: bodyToSend
             }).then(res => res.json()
-            ).then(info => info)
-            const newSubmissionStatus = {};
-            Object.keys(submissionStatus).forEach((key) => newSubmissionStatus[key] = false);
-            newSubmissionStatus[componentName] = true;
-            setSubmissionStatus(newSubmissionStatus)
+            ).then(info => info);
+            setSubmissionStatus(Object.assign({ ...submissionStatus }, { [componentName]: true }));
             router.replace(router.asPath);
         } catch (error) {
             console.error(error);
@@ -74,10 +65,8 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
         const newTrig = (readOnlyTriggers[key] === true) ? false : true;
         Object.keys(readOnlyTriggers).forEach((field) => newReadOnlyVals[field] = true);
         newReadOnlyVals[key] = newTrig;
-
         setReadOnlyTriggers(newReadOnlyVals)
         return
-
     };
 
     if (!session) {
@@ -90,6 +79,7 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
     };
 
     return (
+
         <Layout>
             <Dialog
                 open={true}
@@ -125,6 +115,7 @@ type Props = {
     readOnlyVals: any,
     submissionStatusVals: any
 }
+
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
     const session = await getSession({ req });
     if (!session) {
@@ -145,7 +136,11 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             phoneNumber: true,
             defRmndrStr: true,
             defRmndrTime: true,
-            calendar: true
+            calendar: {
+                select: {
+                    googleID: true
+                }
+            }
         }
     });
 
@@ -154,7 +149,6 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
     Object.keys(accountSettings).forEach((key) => {
         readOnlyVals[key] = true;
         submissionStatusVals[key] = false;
-
     });
 
     return {
@@ -165,4 +159,5 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
         },
     }
 };
-export default Settings
+
+export default Settings;

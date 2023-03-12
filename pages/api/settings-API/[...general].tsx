@@ -1,10 +1,13 @@
 import { getSession } from 'next-auth/react';
 import prisma from '../../../lib/prisma';
 import { NextApiRequest, NextApiResponse } from 'next'
+import { text } from 'stream/consumers';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+
     const session = await getSession({ req });
     const { componentName, textSubmission } = req.body;
+    console.log('hitting general settings ', componentName, textSubmission)
 
     const fieldToUpdate = componentName;
     const valueToChange = (componentName === "defRmndrTime" || componentName === "phoneNumber") ? Number(textSubmission) : String(textSubmission)
@@ -18,10 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 [fieldToUpdate]: true
             }
         });
-        res.json(result)
+        res.json(result);
     } catch (error) {
-        res.json("there was an issue" + error)
-    }
+        res.json("there was an issue" + error);
+    };
 }
 
 
