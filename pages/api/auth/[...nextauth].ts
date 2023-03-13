@@ -6,54 +6,56 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import prisma from '../../../lib/prisma'
 import { AuthToken } from '../../../types/next-auth'
-import { TokenSet } from 'next-auth'
+import { type TokenSet } from "@auth/core/types"
+import { signIn } from 'next-auth/react'
 
 
 
 
-const refreshAccessToken = async (
-    payload: AuthToken,
-    clientId: string,
-    clientSecret: string,
-): Promise<AuthToken> => {
-    try {
-        const url = new URL('https://accounts.google.com/o/oauth2/token')
-        url.searchParams.set('client_id', clientId)
-        url.searchParams.set('client_secret', clientSecret)
-        url.searchParams.set('grant_type', 'refresh_token')
-        url.searchParams.set('refresh_token', payload.refreshToken)
 
-        const response = await fetch(url.toString(), {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            method: 'POST',
-        })
+// const refreshAccessToken = async (
+//     payload: AuthToken,
+//     clientId: string,
+//     clientSecret: string,
+// ): Promise<AuthToken> => {
+//     try {
+//         const url = new URL('https://accounts.google.com/o/oauth2/token')
+//         url.searchParams.set('client_id', clientId)
+//         url.searchParams.set('client_secret', clientSecret)
+//         url.searchParams.set('grant_type', 'refresh_token')
+//         url.searchParams.set('refresh_token', payload.refreshToken)
 
-        const refreshToken = await response.json()
+//         const response = await fetch(url.toString(), {
+//             headers: {
+//                 'Content-Type': 'application/x-www-form-urlencoded',
+//             },
+//             method: 'POST',
+//         })
 
-        if (!response.ok) {
-            throw refreshToken
-        }
+//         const refreshToken = await response.json()
 
-        // Give a 10 sec buffer
-        const now = new Date()
-        const accessTokenExpires = now.setSeconds(now.getSeconds() + parseInt(refreshToken.expires_at) - 10)
-        return {
-            ...payload,
-            accessToken: refreshToken.access_token,
-            accessTokenExpires,
-            refreshToken: payload.refreshToken,
-        }
-    } catch (error) {
-        console.error('ERR', error)
+//         if (!response.ok) {
+//             throw refreshToken
+//         }
 
-        return {
-            ...payload,
-            error: 'RefreshAccessTokenError',
-        }
-    }
-}
+//         // Give a 10 sec buffer
+//         const now = new Date()
+//         const accessTokenExpires = now.setSeconds(now.getSeconds() + parseInt(refreshToken.expires_at) - 10)
+//         return {
+//             ...payload,
+//             accessToken: refreshToken.access_token,
+//             accessTokenExpires,
+//             refreshToken: payload.refreshToken,
+//         }
+//     } catch (error) {
+//         console.error('ERR', error)
+
+//         return {
+//             ...payload,
+//             error: 'RefreshAccessTokenError',
+//         }
+//     }
+// }
 
 let ErrorGoogleEnv = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production'
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env
@@ -122,12 +124,30 @@ export const authOptions: NextAuthOptions = {
         secret: process.env.NEXTAUTH_SECRET,
     },
     callbacks: {
+        //@ts-ignore
+        async signIn({ user, account, profile, email, credentials }) {
+            if (account?.refresh_token) {
+                await prisma.account.update({
+                    data: {
+                        access_token: account.access_token,
+                        expires_at: account.expires_at,
+                        refresh_token: account.refresh_token
+                    },
+                    where: {
+                        provider_providerAccountId: {
+                            provider: "google",
+                            providerAccountId: account.providerAccountId,
+                        },
+                    },
+                })
+            }
+            return true
+        },
         async session({ session, user }) {
+            let tokens: TokenSet
             const [google] = await prisma.account.findMany({
                 where: { userId: user.id, provider: "google" },
             })
-            session.googleAccessToken = google.access_token;
-            session.googleRefreshToken = google.access_token;
             if (google.expires_at * 1000 < Date.now()) {
                 // If the access token has expired, try to refresh it
                 try {
@@ -139,21 +159,21 @@ export const authOptions: NextAuthOptions = {
                             client_id: process.env.GOOGLE_CLIENT_ID,
                             client_secret: process.env.GOOGLE_CLIENT_SECRET,
                             grant_type: "refresh_token",
-                            refresh_token: google.refresh_token,
+                            refresh_token: google?.refresh_token,
                         }),
                         method: "POST",
                     })
 
-                    const tokens: TokenSet = await response.json()
-                    // console.log('🚀 - file: [...nextauth].ts - line 92 - profile - profile', profile)
+                    tokens = await response.json()
+                    console.log('🚀 - file: [...nextauth].ts - line 92 - profile - token', tokens)
 
                     if (!response.ok) throw tokens
 
                     await prisma.account.update({
                         data: {
                             access_token: tokens.access_token,
-                            expires_at: Math.floor(Date.now() / 1000 + Number(tokens.expires_in)),
-                            refresh_token: tokens.refresh_token ?? google.refresh_token,
+                            expires_at: Math.floor(Date.now() / 1000 + tokens.expires_in),
+                            refresh_token: tokens?.refresh_token ?? google?.refresh_token,
                         },
                         where: {
                             provider_providerAccountId: {
@@ -168,9 +188,12 @@ export const authOptions: NextAuthOptions = {
                     session.error = "RefreshAccessTokenError"
                 }
             }
-
+            session.googleAccessToken = google.access_token;
+            session.googleRefreshToken = tokens?.refresh_token ?? google?.refresh_token;
+            session.expires_at = google.expires_at;
             return session
-        }
+        },
+
     }
 }
 
