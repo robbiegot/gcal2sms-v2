@@ -41,7 +41,7 @@ CREATE TABLE "Calendar" (
     "id" TEXT NOT NULL,
     "googleId" TEXT NOT NULL,
     "calOwnerId" TEXT NOT NULL,
-    "Summary" TEXT NOT NULL,
+    "summary" TEXT NOT NULL,
     "timeZone" TEXT,
     "location" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -76,7 +76,7 @@ CREATE TABLE "Reminder" (
     "rmdrType" TEXT,
     "rmdrText" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
-    "ReadyToSend" BOOLEAN NOT NULL,
+    "readyToSend" BOOLEAN NOT NULL,
     "sent" BOOLEAN NOT NULL DEFAULT false,
     "canceled" BOOLEAN NOT NULL DEFAULT false,
 

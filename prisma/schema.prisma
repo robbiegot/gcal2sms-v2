@@ -55,7 +55,7 @@ model Calendar {
   googleId   String   @unique
   calOwner   User     @relation(fields: [calOwnerId], references: [id])
   calOwnerId String
-  Summary    String
+  summary    String
   timeZone   String?
   location   String?
   events     Event[]
@@ -90,7 +90,7 @@ model Reminder {
   event       Event                 @relation(fields: [eventId], references: [id])
   eventId     String
   attendees   ContactsOnReminders[]
-  ReadyToSend Boolean
+  readyToSend Boolean
   sent        Boolean               @default(false)
   canceled    Boolean               @default(false)
 }
@@ -100,7 +100,7 @@ model Contact {
   email         String                @unique
   userOwner     User                  @relation(fields: [userOwnerId], references: [id])
   userOwnerId   String
-  Reminder      ContactsOnReminders[]
+  reminder      ContactsOnReminders[]
   phoneNumber   Int                   @unique
   sendReminders Boolean               @default(true)
   defRmndrStr   String?               @default("you have an upcoming appointment")
