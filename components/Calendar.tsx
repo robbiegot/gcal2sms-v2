@@ -20,7 +20,7 @@ const Calendar = () => {
       }}>
       <FullCalendar
         plugins={[dayGridPlugin, googleCalendarPlugin, timeGridPlugin, listPlugin]}
-        googleCalendarApiKey=''
+        googleCalendarApiKey={process.env.API_KEY}
         headerToolbar={{ center: 'listWeek,dayGridMonth,timeGridWeek,timeGridDay' }} // buttons for switching between views
         initialView='listWeek'
         weekends={true}
