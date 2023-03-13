@@ -6,14 +6,10 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import prisma from '../../../lib/prisma'
 import { AuthToken } from '../../../types/next-auth'
+import { TokenSet } from 'next-auth'
 
-const GOOGLE_AUTHORIZATION_URL =
-    'https://accounts.google.com/o/oauth2/v2/auth?' +
-    new URLSearchParams({
-        prompt: 'consent',
-        access_type: 'offline',
-        response_type: 'code',
-    })
+
+
 
 const refreshAccessToken = async (
     payload: AuthToken,
@@ -90,7 +86,12 @@ if (ErrorGoogleEnv) {
         GoogleProvider({
             clientId: GOOGLE_CLIENT_ID!,
             clientSecret: GOOGLE_CLIENT_SECRET!,
-            accessTokenUrl: GOOGLE_AUTHORIZATION_URL,
+            accessTokenUrl: 'https://accounts.google.com/o/oauth2/v2/auth?' +
+                new URLSearchParams({
+                    prompt: 'consent',
+                    access_type: 'offline',
+                    response_type: 'code',
+                }),
             authorization: {
                 params: {
                     access_type: 'offline',
@@ -121,50 +122,56 @@ export const authOptions: NextAuthOptions = {
         secret: process.env.NEXTAUTH_SECRET,
     },
     callbacks: {
-        // @ts-ignore
-        async jwt({ token, user, account }: JwtInterface): Promise<AuthToken> {
-            let res: AuthToken
-            const now = Date.now()
-            // Signing in
-            if (account && user) {
-                const accessToken = account.access_token
-                const refreshToken = account.refresh_token
+        async session({ session, user }) {
+            const [google] = await prisma.account.findMany({
+                where: { userId: user.id, provider: "google" },
+            })
+            session.googleAccessToken = google.access_token;
+            session.googleRefreshToken = google.access_token;
+            if (google.expires_at * 1000 < Date.now()) {
+                // If the access token has expired, try to refresh it
+                try {
+                    // https://accounts.google.com/.well-known/openid-configuration
+                    // We need the `token_endpoint`.
+                    const response = await fetch("https://oauth2.googleapis.com/token", {
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: new URLSearchParams({
+                            client_id: process.env.GOOGLE_CLIENT_ID,
+                            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                            grant_type: "refresh_token",
+                            refresh_token: google.refresh_token,
+                        }),
+                        method: "POST",
+                    })
 
-                res = {
-                    accessToken,
-                    accessTokenExpires: account.expires_at,
-                    refreshToken,
-                    user,
+                    const tokens: TokenSet = await response.json()
+                    // console.log('🚀 - file: [...nextauth].ts - line 92 - profile - profile', profile)
+
+                    if (!response.ok) throw tokens
+
+                    await prisma.account.update({
+                        data: {
+                            access_token: tokens.access_token,
+                            expires_at: Math.floor(Date.now() / 1000 + Number(tokens.expires_in)),
+                            refresh_token: tokens.refresh_token ?? google.refresh_token,
+                        },
+                        where: {
+                            provider_providerAccountId: {
+                                provider: "google",
+                                providerAccountId: google.providerAccountId,
+                            },
+                        },
+                    })
+                } catch (error) {
+                    console.error("Error refreshing access token", error)
+                    // The error property will be used client-side to handle the refresh token error
+                    session.error = "RefreshAccessTokenError"
                 }
-            } else if (token.expires_at === null || now < token.expires_at) {
-                // Subsequent use of JWT, the user has been logged in before
-                // access token has not expired yet
-                res = token
-            } else {
-                // access token has expired, try to update it
-                res = await refreshAccessToken(
-                    token,
-                    String(process.env.GOOGLE_ID),
-                    String(process.env.GOOGLE_SECRET),
-                )
             }
 
-            return res
-        },
-        // @ts-ignore
-        async session({ session, token, user, account }: any) {
-            session.token = token
-            session.jwt = user.jwt
-            session.id = user.id
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - token", token)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - user", user)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - session", session)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - account", account)
-
             return session
-        },
-    },
-    debug: false,
+        }
+    }
 }
 
 export default (req: NextApiRequest, res: NextApiResponse) => NextAuth(req, res, authOptions)

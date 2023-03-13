@@ -7,7 +7,8 @@ declare module "next-auth" {
    */
   interface Session {
     user: User | AdapterUser,
-    accessToken: JWT,
+    googleAccessToken: JWT,
+    googleRefreshToken: JWT,
     error: String | buffer,
   }
 } interface AuthToken {
