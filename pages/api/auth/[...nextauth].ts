@@ -6,58 +6,9 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import prisma from '../../../lib/prisma'
 import { AuthToken } from '../../../types/next-auth'
+import { type TokenSet } from "@auth/core/types"
+import { signIn } from 'next-auth/react'
 
-const GOOGLE_AUTHORIZATION_URL =
-    'https://accounts.google.com/o/oauth2/v2/auth?' +
-    new URLSearchParams({
-        prompt: 'consent',
-        access_type: 'offline',
-        response_type: 'code',
-    })
-
-const refreshAccessToken = async (
-    payload: AuthToken,
-    clientId: string,
-    clientSecret: string,
-): Promise<AuthToken> => {
-    try {
-        const url = new URL('https://accounts.google.com/o/oauth2/token')
-        url.searchParams.set('client_id', clientId)
-        url.searchParams.set('client_secret', clientSecret)
-        url.searchParams.set('grant_type', 'refresh_token')
-        url.searchParams.set('refresh_token', payload.refreshToken)
-
-        const response = await fetch(url.toString(), {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            method: 'POST',
-        })
-
-        const refreshToken = await response.json()
-
-        if (!response.ok) {
-            throw refreshToken
-        }
-
-        // Give a 10 sec buffer
-        const now = new Date()
-        const accessTokenExpires = now.setSeconds(now.getSeconds() + parseInt(refreshToken.expires_at) - 10)
-        return {
-            ...payload,
-            accessToken: refreshToken.access_token,
-            accessTokenExpires,
-            refreshToken: payload.refreshToken,
-        }
-    } catch (error) {
-        console.error('ERR', error)
-
-        return {
-            ...payload,
-            error: 'RefreshAccessTokenError',
-        }
-    }
-}
 
 let ErrorGoogleEnv = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production'
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env
@@ -90,7 +41,12 @@ if (ErrorGoogleEnv) {
         GoogleProvider({
             clientId: GOOGLE_CLIENT_ID!,
             clientSecret: GOOGLE_CLIENT_SECRET!,
-            accessTokenUrl: GOOGLE_AUTHORIZATION_URL,
+            accessTokenUrl: 'https://accounts.google.com/o/oauth2/v2/auth?' +
+                new URLSearchParams({
+                    prompt: 'consent',
+                    access_type: 'offline',
+                    response_type: 'code',
+                }),
             authorization: {
                 params: {
                     access_type: 'offline',
@@ -121,50 +77,77 @@ export const authOptions: NextAuthOptions = {
         secret: process.env.NEXTAUTH_SECRET,
     },
     callbacks: {
-        // @ts-ignore
-        async jwt({ token, user, account }: JwtInterface): Promise<AuthToken> {
-            let res: AuthToken
-            const now = Date.now()
-            // Signing in
-            if (account && user) {
-                const accessToken = account.access_token
-                const refreshToken = account.refresh_token
-
-                res = {
-                    accessToken,
-                    accessTokenExpires: account.expires_at,
-                    refreshToken,
-                    user,
-                }
-            } else if (token.expires_at === null || now < token.expires_at) {
-                // Subsequent use of JWT, the user has been logged in before
-                // access token has not expired yet
-                res = token
-            } else {
-                // access token has expired, try to update it
-                res = await refreshAccessToken(
-                    token,
-                    String(process.env.GOOGLE_ID),
-                    String(process.env.GOOGLE_SECRET),
-                )
+        //@ts-ignore
+        async signIn({ user, account, profile, email, credentials }) {
+            if (account?.refresh_token) {
+                await prisma.account.update({
+                    data: {
+                        access_token: account.access_token,
+                        expires_at: account.expires_at,
+                        refresh_token: account.refresh_token
+                    },
+                    where: {
+                        provider_providerAccountId: {
+                            provider: "google",
+                            providerAccountId: account.providerAccountId,
+                        },
+                    },
+                })
             }
-
-            return res
+            return true
         },
-        // @ts-ignore
-        async session({ session, token, user, account }: any) {
-            session.token = token
-            session.jwt = user.jwt
-            session.id = user.id
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - token", token)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - user", user)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - session", session)
-            console.log("🚀 - file: [...nextauth].ts - line 113 - session - account", account)
+        async session({ session, user }) {
+            let tokens: TokenSet
+            const [google] = await prisma.account.findMany({
+                where: { userId: user.id, provider: "google" },
+            })
+            if (google.expires_at * 1000 < Date.now()) {
+                // If the access token has expired, try to refresh it
+                try {
+                    // https://accounts.google.com/.well-known/openid-configuration
+                    // We need the `token_endpoint`.
+                    const response = await fetch("https://oauth2.googleapis.com/token", {
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: new URLSearchParams({
+                            client_id: process.env.GOOGLE_CLIENT_ID,
+                            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                            grant_type: "refresh_token",
+                            refresh_token: google?.refresh_token,
+                        }),
+                        method: "POST",
+                    })
 
+                    tokens = await response.json()
+                    console.log('🚀 - file: [...nextauth].ts - line 92 - profile - token', tokens)
+
+                    if (!response.ok) throw tokens
+
+                    await prisma.account.update({
+                        data: {
+                            access_token: tokens.access_token,
+                            expires_at: Math.floor(Date.now() / 1000 + tokens.expires_in),
+                            refresh_token: tokens?.refresh_token ?? google?.refresh_token,
+                        },
+                        where: {
+                            provider_providerAccountId: {
+                                provider: "google",
+                                providerAccountId: google.providerAccountId,
+                            },
+                        },
+                    })
+                } catch (error) {
+                    console.error("Error refreshing access token", error)
+                    // The error property will be used client-side to handle the refresh token error
+                    session.error = "RefreshAccessTokenError"
+                }
+            }
+            session.googleAccessToken = google.access_token;
+            session.googleRefreshToken = tokens?.refresh_token ?? google?.refresh_token;
+            session.expires_at = google.expires_at;
             return session
         },
-    },
-    debug: false,
+
+    }
 }
 
 export default (req: NextApiRequest, res: NextApiResponse) => NextAuth(req, res, authOptions)

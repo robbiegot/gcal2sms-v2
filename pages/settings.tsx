@@ -1,6 +1,6 @@
 import Layout from "../components/Layout";
 import React, { useState, useEffect } from "react";
-import { useSession, getSession } from "next-auth/react";
+import { useSession, getSession, signIn } from "next-auth/react";
 import { GetServerSideProps } from 'next';
 import prisma from '../lib/prisma';
 import SettingsTextField from "../components/SettingsText";
@@ -34,25 +34,29 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
     //functionality to reload data when a field has been changed
 
     const refreshData = () => {
-        router.replace(router.asPath);
+        router.replace(router.basePath);
         setIsRefreshing(true);
+        return;
     };
 
-    useEffect(() => {
-        setIsRefreshing(false);
-    }, [accountSettings]);
-
+    const handleCloseDialog = (event, reason) => {
+        if (reason && reason == "backdropClick") {
+            router.replace('/');
+            return;
+        }
+        return;
+    }
 
     const submitData = async (e, componentName: string, textSubmission: string) => {
         e.preventDefault();
         try {
-            const bodyToSend = (componentName === 'calendar') ? JSON.stringify({ calendarID: textSubmission }) : JSON.stringify({ componentName, textSubmission });
+            const bodyToSend = (componentName === 'calendar') ? JSON.stringify({ calendarId: textSubmission }) : JSON.stringify({ componentName, textSubmission });
             const updatedUser = await fetch(`/api/settings-API/${componentName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: bodyToSend
             }).then(res => res.json()
-            ).then(info => info);
+            ).then(info => info)
             setSubmissionStatus(Object.assign({ ...submissionStatus }, { [componentName]: true }));
             router.replace(router.asPath);
         } catch (error) {
@@ -69,23 +73,48 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
         return
     };
 
+    useEffect(() => {
+        setIsRefreshing(false);
+    }, [accountSettings]);
+
+    useEffect(() => {
+        if (session?.error === "RefreshAccessTokenError") {
+            console.log('error with signin')
+            signIn(); // Force sign in to hopefully resolve error
+        }
+    }, [session]);
+
     if (!session) {
         return (
             <Layout>
-                <h1>My Drafts</h1>
                 <div>You need to be authenticated to view this page.</div>
             </Layout>
         );
     };
+    if (status === "loading") {
+        return (
+            <Layout>
+                <p>Loading...</p>
+            </Layout>
+        )
+    }
+
+    if (status === "unauthenticated") {
+        return (
+            <Layout>
+                <p>Access Denied</p>
+            </Layout>
+        )
+    }
 
     return (
-
         <Layout>
             <Dialog
                 open={true}
                 fullWidth={true}
                 maxWidth="xl"
-                TransitionComponent={Slider}>
+                TransitionComponent={Slider}
+                onClose={handleCloseDialog}>
                 <DialogTitle>Settings</DialogTitle>
                 <DialogContent>
                     <FormGroup>
@@ -138,12 +167,12 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             defRmndrTime: true,
             calendar: {
                 select: {
-                    googleID: true
+                    googleId: true
                 }
             }
         }
     });
-
+    Object.assign(accountSettings, { calendar: accountSettings.calendar[0].googleId })
     const readOnlyVals = {};
     const submissionStatusVals = {};
     Object.keys(accountSettings).forEach((key) => {

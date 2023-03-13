@@ -1,15 +1,22 @@
 import React from "react"
-import { GetStaticProps } from "next"
 import Layout from "../components/Layout"
-import prisma from '../lib/prisma';
-import Calendar from "../components/Calendar";
+import { useRouter } from "next/router"
+import { useSession } from "next-auth/react"
 
+const CalendarApp: React.FC = (props) => {
+  const { data: session, status } = useSession();
 
-const Blog: React.FC = (props) => {
+  const router = useRouter()
+
+  if (status === "unauthenticated") {
+    router.replace('/auth/signin')
+    return null;
+  }
+
   return (
     <Layout>
     </Layout>
   )
 }
 
-export default Blog
+export default CalendarApp

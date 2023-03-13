@@ -39,9 +39,9 @@ CREATE TABLE "users" (
 -- CreateTable
 CREATE TABLE "Calendar" (
     "id" TEXT NOT NULL,
-    "googleID" TEXT NOT NULL,
-    "calOwnerID" TEXT NOT NULL,
-    "Summary" TEXT NOT NULL,
+    "googleId" TEXT NOT NULL,
+    "calOwnerId" TEXT NOT NULL,
+    "summary" TEXT NOT NULL,
     "timeZone" TEXT,
     "location" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -76,7 +76,7 @@ CREATE TABLE "Reminder" (
     "rmdrType" TEXT,
     "rmdrText" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
-    "ReadyToSend" BOOLEAN NOT NULL,
+    "readyToSend" BOOLEAN NOT NULL,
     "sent" BOOLEAN NOT NULL DEFAULT false,
     "canceled" BOOLEAN NOT NULL DEFAULT false,
 
@@ -139,7 +139,7 @@ CREATE UNIQUE INDEX "accounts_provider_provider_account_id_key" ON "accounts"("p
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Calendar_googleID_key" ON "Calendar"("googleID");
+CREATE UNIQUE INDEX "Calendar_googleId_key" ON "Calendar"("googleId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Contact_email_key" ON "Contact"("email");
@@ -160,7 +160,7 @@ CREATE UNIQUE INDEX "verificationtokens_identifier_token_key" ON "verificationto
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_calOwnerID_fkey" FOREIGN KEY ("calOwnerID") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_calOwnerId_fkey" FOREIGN KEY ("calOwnerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Event" ADD CONSTRAINT "Event_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

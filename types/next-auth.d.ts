@@ -7,7 +7,9 @@ declare module "next-auth" {
    */
   interface Session {
     user: User | AdapterUser,
-    accessToken: JWT,
+    googleAccessToken: JWT,
+    googleRefreshToken: JWT,
+    expires_at: number,
     error: String | buffer,
   }
 } interface AuthToken {
@@ -25,5 +27,20 @@ interface JwtInterface {
   account: GenericObject
 }
 
+
+declare module "@auth/core/types" {
+  interface Session {
+    error?: "RefreshAccessTokenError"
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    access_token: string
+    expires_at: number
+    refresh_token: string
+    error?: "RefreshAccessTokenError"
+  }
+}
 
 
