@@ -10,53 +10,6 @@ import { type TokenSet } from "@auth/core/types"
 import { signIn } from 'next-auth/react'
 
 
-
-
-
-// const refreshAccessToken = async (
-//     payload: AuthToken,
-//     clientId: string,
-//     clientSecret: string,
-// ): Promise<AuthToken> => {
-//     try {
-//         const url = new URL('https://accounts.google.com/o/oauth2/token')
-//         url.searchParams.set('client_id', clientId)
-//         url.searchParams.set('client_secret', clientSecret)
-//         url.searchParams.set('grant_type', 'refresh_token')
-//         url.searchParams.set('refresh_token', payload.refreshToken)
-
-//         const response = await fetch(url.toString(), {
-//             headers: {
-//                 'Content-Type': 'application/x-www-form-urlencoded',
-//             },
-//             method: 'POST',
-//         })
-
-//         const refreshToken = await response.json()
-
-//         if (!response.ok) {
-//             throw refreshToken
-//         }
-
-//         // Give a 10 sec buffer
-//         const now = new Date()
-//         const accessTokenExpires = now.setSeconds(now.getSeconds() + parseInt(refreshToken.expires_at) - 10)
-//         return {
-//             ...payload,
-//             accessToken: refreshToken.access_token,
-//             accessTokenExpires,
-//             refreshToken: payload.refreshToken,
-//         }
-//     } catch (error) {
-//         console.error('ERR', error)
-
-//         return {
-//             ...payload,
-//             error: 'RefreshAccessTokenError',
-//         }
-//     }
-// }
-
 let ErrorGoogleEnv = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production'
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env
 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
