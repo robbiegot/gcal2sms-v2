@@ -65,7 +65,7 @@ model Calendar {
 
 model Event {
   id             String             @id @default(cuid())
-  googleId       String
+  googleId       String             @unique
   calendar       Calendar           @relation(fields: [calendarId], references: [id])
   calendarId     String
   status         String?
@@ -80,6 +80,8 @@ model Event {
   end            DateTime
   reminders      Reminder[]
   attendees      ContactsOnEvents[]
+
+  @@map("events")
 }
 
 model Reminder {

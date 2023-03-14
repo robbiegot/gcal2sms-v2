@@ -13,6 +13,7 @@ import {
     DialogContent,
     Slide,
     FormGroup,
+    Button
 } from '@mui/material';
 
 const Slider = React.forwardRef(function Transition(
@@ -59,6 +60,24 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
             ).then(info => info)
             setSubmissionStatus(Object.assign({ ...submissionStatus }, { [componentName]: true }));
             router.replace(router.asPath);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const getEventsTest = async (e) => {
+        e.preventDefault();
+        try {
+            const bodyToSend = await JSON.stringify({ calendarId: "bebb89fac3b2ab6f9b9d2749bd5763296f91a9ff1788d946a37cc57baf868278@group.calendar.google.com" })
+            const updatedUser = await fetch(`/api/events-from-google/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: bodyToSend
+            }).then(res => res.json()
+            ).then(info => {
+                console.log(info)
+                return info
+            })
         } catch (error) {
             console.error(error);
         }
@@ -117,6 +136,10 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
                 onClose={handleCloseDialog}>
                 <DialogTitle>Settings</DialogTitle>
                 <DialogContent>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={getEventsTest}>Hello</Button>
                     <FormGroup>
                         {Object.keys(accountSettings).map((setting) => {
                             return (
@@ -172,7 +195,9 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             }
         }
     });
-    Object.assign(accountSettings, { calendar: accountSettings.calendar[0].googleId })
+    if (accountSettings.calendar[0]) {
+        Object.assign(accountSettings, { calendar: accountSettings.calendar[0].googleId })
+    }
     const readOnlyVals = {};
     const submissionStatusVals = {};
     Object.keys(accountSettings).forEach((key) => {
