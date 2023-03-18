@@ -6,12 +6,16 @@ import { GetServerSideProps } from "next"
 import prisma from "../lib/prisma"
 import { getSession } from "next-auth/react"
 import Calendar from "../components/Calendar"
+import { Event } from "@prisma/client"
 
-type eventsProp = Omit<Event, 'created' | 'updated' | 'start' | 'end'> & { created: string, updated: string, start: string, end: string }[]
+type appPageProps = {
+  events?: eventsProp
+}
+type eventsProp = Omit<Event, 'created' | 'updated' | 'start' | 'end'> & { created: string, updated: string, start: string, end: string }[] | undefined;
 
-const CalendarApp: React.FC<{ events: eventsProp }> = ({ events }) => {
+const CalendarApp: React.FC<appPageProps> = ({ events }) => {
   const { data: session, status } = useSession();
-  const router = useRouter()
+  const router = useRouter();
 
   if (status === "unauthenticated") {
     router.replace('/auth/signin')
@@ -25,14 +29,19 @@ const CalendarApp: React.FC<{ events: eventsProp }> = ({ events }) => {
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
+export const getServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
   if (!session) {
     res.statusCode = 403;
-    return
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      }
+    };
   }
   try {
-    const data = await prisma.user.findUnique({
+    const events = await prisma.user.findUnique({
       where: {
         email: session.user.email,
       },
@@ -43,16 +52,19 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
           }
         }
       }
-    })
-    //@ts-ignore
-    const events: eventsProp = data.calendar[0].events.map(event => {
-      return Object.assign({ ...event }, {
-        created: (event.created).toISOString(),
-        updated: (event.updated).toISOString(),
-        start: (event.start).toISOString(),
-        end: (event.end).toISOString()
-      })
-    })
+    }).then((data => {
+      const eventsFromDB: Event[] | null = data?.calendar[0]?.events;
+      const eventData = eventsFromDB ? data?.calendar[0]?.events?.map((event: Event) => {
+        return Object.assign({ ...event }, {
+          created: (event.created).toISOString(),
+          updated: (event.updated).toISOString(),
+          start: (event.start).toISOString(),
+          end: (event.end).toISOString()
+        })
+      }) : [];
+      return eventData;
+    }))
+
     return {
       props: {
         events
@@ -60,9 +72,14 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
     };
   } catch (error) {
     console.log("there was an issue" + error);
-    return;
-  };
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      }
+    };
+  }
 }
 
 
-export default CalendarApp
+export default CalendarApp;

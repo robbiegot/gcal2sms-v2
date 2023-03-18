@@ -50,6 +50,7 @@ if (ErrorGoogleEnv) {
             authorization: {
                 params: {
                     access_type: 'offline',
+                    prompt: 'consent',
                     scope: "https://www.googleapis.com/auth/calendar.readonly openid profile email",
                 },
             },
@@ -79,7 +80,13 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         //@ts-ignore
         async signIn({ user, account, profile, email, credentials }) {
-            if (account?.refresh_token) {
+            const now = Date.now();
+            console.log('now at SignIn', now)
+            const [google] = await prisma.account.findMany({
+                where: { userId: user.id, provider: "google" },
+            });
+
+            if (google && account?.refresh_token) {
                 await prisma.account.update({
                     data: {
                         access_token: account.access_token,
@@ -94,9 +101,12 @@ export const authOptions: NextAuthOptions = {
                     },
                 })
             }
+            console.log('end of signin', account)
             return true
         },
         async session({ session, user }) {
+            const now = Date.now();
+            console.log('now at session', now)
             let tokens: TokenSet
             const [google] = await prisma.account.findMany({
                 where: { userId: user.id, provider: "google" },
@@ -135,6 +145,7 @@ export const authOptions: NextAuthOptions = {
                             },
                         },
                     })
+
                 } catch (error) {
                     console.error("Error refreshing access token", error)
                     // The error property will be used client-side to handle the refresh token error
