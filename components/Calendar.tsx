@@ -33,14 +33,16 @@ const Calendar = ({ events }) => {
     )
   }
 
-
-  const [eventsForCal, setEventsForCal] = useState(events.map(event => {
+  const initialEventState = events ? events.map(event => {
     return {
       id: event.id, title: event.summary, start: event.start, end: event.end, extendedProps: {
         status: event.status, description: events.description
       }
     }
-  }))
+  }) : [];
+
+  const [eventsForCal, setEventsForCal] = useState(initialEventState)
+
 
   console.log('here are the events for cal', eventsForCal)
   return (
