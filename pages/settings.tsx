@@ -180,22 +180,23 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             }
         };
     }
-    const accountSettings = await prisma.user.findUnique({
-        where: {
-            email: session.user.email
-        },
-        select: {
-            phoneNumber: true,
-            defRmndrStr: true,
-            defRmndrTime: true,
-            calendar: {
-                select: {
-                    googleId: true
+    try {
+        const accountSettings = await prisma.user.findUnique({
+            where: {
+                email: session.user.email
+            },
+            select: {
+                phoneNumber: true,
+                defRmndrStr: true,
+                defRmndrTime: true,
+                calendar: {
+                    select: {
+                        googleId: true
+                    }
                 }
             }
-        }
-    });
-    if (accountSettings.calendar[0]) {
+        });
+         if (accountSettings.calendar[0]) {
         Object.assign(accountSettings, { calendar: accountSettings.calendar[0].googleId })
     }
     const readOnlyVals = {};
@@ -212,6 +213,18 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             submissionStatusVals
         },
     }
+} catch(error) {
+    console.log('theres been an error in settings 217', error)
+    return {
+        props: {
+            accountSettings: { name: 'hello' },
+            readOnlyVals: { name: true },
+            submissionStatusVals: { name: false }
+        }
+    }
+}
+
+   
 };
 
 export default Settings;
