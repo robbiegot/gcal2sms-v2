@@ -51,16 +51,21 @@ model User {
 }
 
 model Calendar {
-  id         String   @id @default(cuid())
-  googleId   String   @unique
-  calOwner   User     @relation(fields: [calOwnerId], references: [id])
-  calOwnerId String
-  summary    String
-  timeZone   String?
-  location   String?
-  events     Event[]
-  createdAt  DateTime @default(now()) @map(name: "created_at")
-  updatedAt  DateTime @updatedAt @map(name: "updated_at")
+  id                        String    @id @default(cuid())
+  googleId                  String    @unique
+  calOwner                  User      @relation(fields: [calOwnerId], references: [id])
+  calOwnerId                String
+  summary                   String
+  timeZone                  String?
+  location                  String?
+  events                    Event[]
+  createdAt                 DateTime  @default(now()) @map(name: "created_at")
+  updatedAt                 DateTime  @updatedAt @map(name: "updated_at")
+  X_Goog_Channel_Id         String?
+  X_Goog_Resource_Id        String?
+  X_Goog_Resource_Uri       String?
+  X_Goog_Channel_Expiration DateTime?
+  X_Goog_Resource_State     String?
 }
 
 model Event {

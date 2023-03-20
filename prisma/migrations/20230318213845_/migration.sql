@@ -46,6 +46,11 @@ CREATE TABLE "Calendar" (
     "location" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "X_Goog_Channel_Id" TEXT,
+    "X_Goog_Resource_Id" TEXT,
+    "X_Goog_Resource_Uri" TEXT,
+    "X_Goog_Channel_Expiration" TEXT,
+    "X_Goog_Resource_State" TEXT,
 
     CONSTRAINT "Calendar_pkey" PRIMARY KEY ("id")
 );
