@@ -1,11 +1,10 @@
 import { getSession } from 'next-auth/react';
 import prisma from '../../lib/prisma';
-import { Event, Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { OAuth2Client, Credentials } from 'google-auth-library';
+import { OAuth2Client } from 'google-auth-library';
 import { calendar_v3, google } from "googleapis";
 import { Session } from 'next-auth';
-import { BodyResponseCallback } from 'googleapis/build/src/apis/abusiveexperiencereport';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const session: Session = await getSession({ req });
     const { calendarId }: { calendarId: string } = req.body;
@@ -29,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const events = await calendar.events.list({
         calendarId: calendarId,
-        timeMin: (new Date()).toISOString(),
+        timeMin: (new Date('January 1, 2023')).toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
     }, async (error, result) => {
