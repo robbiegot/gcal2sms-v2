@@ -61,8 +61,8 @@ model Calendar {
   events                    Event[]
   createdAt                 DateTime  @default(now()) @map(name: "created_at")
   updatedAt                 DateTime  @updatedAt @map(name: "updated_at")
-  X_Goog_Channel_Id         String?
-  X_Goog_Resource_Id        String?
+  X_Goog_Channel_Id         String?   @unique
+  X_Goog_Resource_Id        String?   @unique
   X_Goog_Resource_Uri       String?
   X_Goog_Channel_Expiration DateTime?
   X_Goog_Resource_State     String?
@@ -103,16 +103,17 @@ model Reminder {
 }
 
 model Contact {
-  id            String                @id @default(cuid())
-  email         String                @unique
-  userOwner     User                  @relation(fields: [userOwnerId], references: [id])
-  userOwnerId   String
-  reminder      ContactsOnReminders[]
-  phoneNumber   Int                   @unique
-  sendReminders Boolean               @default(true)
-  defRmndrStr   String?               @default("you have an upcoming appointment")
-  defRmndrTime  DateTime
-  events        ContactsOnEvents[]
+  id                 String                @id @default(cuid())
+  email              String?               @unique
+  userOwner          User                  @relation(fields: [userOwnerId], references: [id])
+  userOwnerId        String
+  name               String
+  reminder           ContactsOnReminders[]
+  phoneNumber        Int                   @unique
+  sendReminders      Boolean               @default(true)
+  customReminderText String?
+  cutomReminderTime  Int?
+  events             ContactsOnEvents[]
 }
 
 model ContactsOnReminders {
