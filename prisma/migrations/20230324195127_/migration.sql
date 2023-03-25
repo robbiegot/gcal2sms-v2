@@ -49,7 +49,7 @@ CREATE TABLE "Calendar" (
     "X_Goog_Channel_Id" TEXT,
     "X_Goog_Resource_Id" TEXT,
     "X_Goog_Resource_Uri" TEXT,
-    "X_Goog_Channel_Expiration" TEXT,
+    "X_Goog_Channel_Expiration" TIMESTAMP(3),
     "X_Goog_Resource_State" TEXT,
 
     CONSTRAINT "Calendar_pkey" PRIMARY KEY ("id")
@@ -91,12 +91,13 @@ CREATE TABLE "Reminder" (
 -- CreateTable
 CREATE TABLE "Contact" (
     "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
+    "email" TEXT,
     "userOwnerId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "phoneNumber" INTEGER NOT NULL,
     "sendReminders" BOOLEAN NOT NULL DEFAULT true,
-    "defRmndrStr" TEXT DEFAULT 'you have an upcoming appointment',
-    "defRmndrTime" TIMESTAMP(3) NOT NULL,
+    "customReminderText" TEXT,
+    "customReminderTime" INTEGER,
 
     CONSTRAINT "Contact_pkey" PRIMARY KEY ("id")
 );
@@ -147,13 +148,13 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "Calendar_googleId_key" ON "Calendar"("googleId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Calendar_X_Goog_Channel_Id_key" ON "Calendar"("X_Goog_Channel_Id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Calendar_X_Goog_Resource_Id_key" ON "Calendar"("X_Goog_Resource_Id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "events_googleId_key" ON "events"("googleId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Contact_email_key" ON "Contact"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Contact_phoneNumber_key" ON "Contact"("phoneNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sessions_session_token_key" ON "sessions"("session_token");

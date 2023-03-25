@@ -5,88 +5,49 @@ import {
     GridRowModesModel, GridRowModes, GridRowParams, MuiEvent, GridRowModel, GridEventListener, GridToolbarQuickFilter,
     GridPreProcessEditCellProps, GridCellParams, GridValueFormatterParams
 } from '@mui/x-data-grid';
-import { Button } from '@mui/material';
 import libphonenumber from 'google-libphonenumber';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
-import { v4 as randomId } from 'uuid';
-import prisma from '../lib/prisma';
+import prisma from '../../lib/prisma';
 import { GetServerSideProps } from 'next';
 import { getSession, useSession } from 'next-auth/react';
-import { useRouter } from 'next/router';
 import Alert, { AlertProps } from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import ContactsEditToolbar from '../../components/ContactsEditToolbar';
+import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime';
 
 
-const rawRows: GridRowsProp = [
-    { id: 1, name: 'Jim John', email: "JimJohn@JoinRight.com", phoneNumber: "2015724343", sendReminders: true, customReminderText: "reminder, you have an upcoming appointment0", customReminderTime: 36 },
-    { id: 2, name: 'Anni Hello', email: "Annie@JoinRight.com", phoneNumber: "9737630275", sendReminders: false, customReminderText: "reminder, you have an upcoming appointment0", customReminderTime: 36 },
-    { id: 3, name: 'Ben Johb', email: "11@JoinRight.com", phoneNumber: "4165872222", sendReminders: true, customReminderText: "reminder, you have an upcoming appointment0", customReminderTime: 36 },
-    { id: 4, name: 'Bob Lob', email: "22@JoinRight.com", phoneNumber: "9737630275", sendReminders: false, customReminderText: "reminder, you have an upcoming appointment0", customReminderTime: 36 },
-
-];
-
-
-interface EditToolbarProps {
-    setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
-    setRowModesModel: (
-        newModel: (oldModel: GridRowModesModel) => GridRowModesModel,
-    ) => void;
-}
-
-function EditToolbar(props: EditToolbarProps) {
-    const { setRows, setRowModesModel } = props;
-
-    const handleClick = () => {
-        const id = randomId();
-        setRows((oldRows) => [...oldRows, { id, name: '', age: '', isNew: true }]);
-        setRowModesModel((oldModel) => ({
-            ...oldModel,
-            [id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
-        }));
-    };
-
-    return (
-        <GridToolbarContainer sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Button color="primary" startIcon={<AddIcon />} onClick={handleClick}>
-                Add record
-            </Button>
-            <GridToolbarQuickFilter />
-        </GridToolbarContainer>
-    );
-}
-
-
-export default function FullFeaturedCrudGrid() {
+export default function ContactsGrid({ contacts }) {
     const { data: session, status } = useSession();
-    const [rows, setRows] = useState<GridRowsProp>(rawRows);
+    const [rows, setRows] = useState<GridRowsProp>(contacts);
     const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
     const [snackbar, setSnackbar] = useState<Pick<AlertProps, 'children' | 'severity'> | null>(null);
 
-    //functionality to reload data when a field has been changed
 
     const submitData = () => {
         return useCallback(
-            (contact: GridRowModel) => {
-                return fetch(`/api/contacts-API/`, {
-                    method: 'POST',
+            async (method, info: GridRowModel | GridRowId) => {
+                const data = await fetch(`/api/contacts-API/`, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(contact)
-                }).then(res => res.json()
-                ).then(newContact => newContact
-                ).catch(Error => new Error("Data is incorrectly formatted."));
-            },
-            [])
+                    body: JSON.stringify(info)
+                }).then(async data => {
+                    const response = await data.json()
+                    if (response.code) { //this means theres an error
+                        throw response
+                    }
+                }).catch(error => {
+                    return error;
+                })
+                return data;
+            }, [])
     }
     const mutateRow = submitData();
 
-
     const handleCloseSnackbar = () => setSnackbar(null);
-
 
     const handleRowEditStart = (
         params: GridRowParams,
@@ -94,23 +55,18 @@ export default function FullFeaturedCrudGrid() {
     ) => {
         event.defaultMuiPrevented = true;
     };
-
     const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event) => {
         event.defaultMuiPrevented = true;
     };
-
     const handleEditClick = (id: GridRowId) => () => {
         setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
     };
-
     const handleSaveClick = (id: GridRowId) => () => {
         setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
     };
-
     const handleDeleteClick = (id: GridRowId) => () => {
-        setRows(rows.filter((row) => row.id !== id));
+        processRowDelete(id);
     };
-
     const handleCancelClick = (id: GridRowId) => () => {
         setRowModesModel({
             ...rowModesModel,
@@ -121,23 +77,50 @@ export default function FullFeaturedCrudGrid() {
             setRows(rows.filter((row) => row.id !== id));
         }
     };
-
-    const processRowUpdate = useCallback(
-        async (newRow: GridRowModel) => {
-            const response = await mutateRow(newRow);
-            setSnackbar({ children: 'Contact successfully saved', severity: 'success' });
-            return response;
-        },
-        [mutateRow],
-    );
-
-    const handleProcessRowUpdateError = useCallback((error: Error) => {
-        setSnackbar({ children: error.message, severity: 'error' });
-    }, []);
-
     const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
         setRowModesModel(newRowModesModel);
     };
+
+    const processRowUpdate = useCallback(
+        async (newRow: GridRowModel) => {
+            try {
+                const response = await mutateRow("POST", newRow);
+                if (!response.hasOwnProperty('id')) {
+                    throw response;
+                }
+                setRows(rows.map((row) => (row.id === response.id ? { ...response, isNew: false } : row)));
+                setSnackbar({ children: 'Contact successfully saved', severity: 'success' });
+                return response;
+            } catch (error) {
+                throw error;
+            }
+        },
+        [mutateRow, rows]
+    );
+
+    const processRowDelete = useCallback(
+        async (id: GridRowId) => {
+            const response = await mutateRow("DELETE", id);
+            if (response.hasOwnProperty('code')) {
+                if (response.code === 'P2002') {
+                    setSnackbar({ children: "there is already a record with that info", severity: 'error' });
+                    return;
+                }
+            }
+            setRows(rows.filter((row) => row.id !== id));
+            setSnackbar({ children: 'Contact successfully deleted', severity: 'success' });
+            return response;
+        },
+        [mutateRow, rows]
+    );
+
+    const handleProcessRowUpdateError = useCallback((error: PrismaClientKnownRequestError | PrismaClientUnknownRequestError) => {
+        if (error.hasOwnProperty('code') && error.code === 'P2002') {
+            setSnackbar({ children: 'A contact with this info already exists', severity: 'error' });
+            return;
+        }
+        setSnackbar({ children: error.message, severity: 'error' });
+    }, []);
 
     const columns: GridColDef[] = [
         {
@@ -148,7 +131,6 @@ export default function FullFeaturedCrudGrid() {
             hideable: false,
             getActions: ({ id }) => {
                 const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
-
                 if (isInEditMode) {
                     return [
                         <GridActionsCellItem
@@ -206,18 +188,28 @@ export default function FullFeaturedCrudGrid() {
             headerName: 'Phone Number',
             field: 'phoneNumber',
             editable: true,
+            type: "number",
+            headerAlign: 'left',
+            align: 'left',
+            hideSortIcons: true,
             preProcessEditCellProps: (params: GridPreProcessEditCellProps) => {
-                try {
+                if (!params.props.value) return { ...params.props, error: false };
+                const input = params?.props?.value.toString();
+                if (input.length >= 10) {
                     const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
-                    const hasError = (phoneUtil.isValidNumberForRegion(phoneUtil.parse(params.props.value, 'US'), 'US') === false);
+                    const number = phoneUtil.parse(input, 'US')
+                    const hasError = (phoneUtil.isValidNumberForRegion(number, 'US') === false);
                     return { ...params.props, error: hasError };
-                } catch {
-                    return { ...params.props, error: true };
                 }
+
             },
-            valueFormatter: ({ value }) => {
-                const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
-                return phoneUtil.formatOutOfCountryCallingNumber(phoneUtil.parse(value, 'US'), 'US');
+            valueFormatter: (params: GridValueFormatterParams): any => {
+                const input = params.value.toString();
+                if (input.length >= 10) {
+                    const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
+                    const number = phoneUtil.parse(input, 'US');
+                    return phoneUtil.formatInOriginalFormat(number, 'US')
+                }
             },
         },
         {
@@ -227,19 +219,22 @@ export default function FullFeaturedCrudGrid() {
             type: 'boolean',
             editable: true,
         },
-
+        {
+            width: 69,
+            headerName: 'Custom Timing',
+            type: 'number',
+            field: 'customReminderTime',
+            editable: true,
+            align: 'left',
+            sortable: false,
+        },
         {
             width: 500,
             headerName: 'Custom Reminder Text?',
             field: 'customReminderText',
             editable: true,
         },
-        {
-            width: 500,
-            headerName: 'Custom Reminder Time?',
-            field: 'customReminderTime',
-            editable: true,
-        },
+
 
     ];
 
@@ -256,10 +251,12 @@ export default function FullFeaturedCrudGrid() {
                         onRowEditStart={handleRowEditStart}
                         onRowEditStop={handleRowEditStop}
                         processRowUpdate={processRowUpdate}
-                        slots={{ toolbar: EditToolbar }}
+                        slots={{ toolbar: ContactsEditToolbar }}
                         onProcessRowUpdateError={handleProcessRowUpdateError}
                         slotProps={{
                             toolbar: {
+                                rows: rows,
+                                rowModesModel: rowModesModel,
                                 setRows,
                                 setRowModesModel,
                                 showQuickFilter: true,
@@ -269,6 +266,17 @@ export default function FullFeaturedCrudGrid() {
                             },
                         }}
                         sx={{
+                            '& input[type=number]': {
+                                '-moz-appearance': 'textfield'
+                            },
+                            '& input[type=number]::-webkit-outer-spin-button': {
+                                '-webkit-appearance': 'none',
+                                margin: 0
+                            },
+                            '& input[type=number]::-webkit-inner-spin-button': {
+                                '-webkit-appearance': 'none',
+                                margin: 0
+                            },
                             "& .MuiDataGrid-booleanCell": {
                                 "&[data-value='false']": {
                                     color: 'warning.main',
@@ -324,8 +332,7 @@ export default function FullFeaturedCrudGrid() {
             </div>
         </Layout>
     );
-}
-
+};
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
     const session = await getSession({ req });
@@ -346,9 +353,10 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
                 contacts: true
             }
         });
+        const contactProps = contacts.map(contact => { return { ...contact, isNew: false } })
         return {
             props: {
-                contacts: contacts,
+                contacts: contactProps,
             },
         }
     } catch (error) {

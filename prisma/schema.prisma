@@ -104,16 +104,19 @@ model Reminder {
 
 model Contact {
   id                 String                @id @default(cuid())
-  email              String?               @unique
+  email              String?
   userOwner          User                  @relation(fields: [userOwnerId], references: [id])
   userOwnerId        String
   name               String
   reminder           ContactsOnReminders[]
-  phoneNumber        Int                   @unique
+  phoneNumber        Int
   sendReminders      Boolean               @default(true)
   customReminderText String?
-  cutomReminderTime  Int?
+  customReminderTime Int?
   events             ContactsOnEvents[]
+
+  @@unique([userOwnerId, email])
+  @@unique([userOwnerId, phoneNumber])
 }
 
 model ContactsOnReminders {
