@@ -13,17 +13,16 @@ model Account {
   type               String
   provider           String
   providerAccountId  String  @map("provider_account_id")
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
+  refresh_token      String?
+  access_token       String?
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String? @db.Text
+  id_token           String?
   session_state      String?
   oauth_token_secret String?
   oauth_token        String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -38,14 +37,14 @@ model User {
   defRmndrTime  Int        @default(36)
   phoneNumber   Int?
   lastLogin     DateTime   @default(now())
-  createdAt     DateTime   @default(now()) @map(name: "created_at")
-  updatedAt     DateTime   @updatedAt @map(name: "updated_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
   emailVerified DateTime?
   image         String?
-  accounts      Account[]
-  sessions      Session[]
   calendar      Calendar[]
   contacts      Contact[]
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("users")
 }
@@ -53,26 +52,25 @@ model User {
 model Calendar {
   id                        String    @id @default(cuid())
   googleId                  String    @unique
-  calOwner                  User      @relation(fields: [calOwnerId], references: [id])
   calOwnerId                String
   summary                   String
   timeZone                  String?
   location                  String?
-  events                    Event[]
-  createdAt                 DateTime  @default(now()) @map(name: "created_at")
-  updatedAt                 DateTime  @updatedAt @map(name: "updated_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
   X_Goog_Channel_Id         String?   @unique
   X_Goog_Resource_Id        String?   @unique
   X_Goog_Resource_Uri       String?
   X_Goog_Channel_Expiration DateTime?
   X_Goog_Resource_State     String?
   syncToken                 String?
+  calOwner                  User      @relation(fields: [calOwnerId], references: [id], onDelete: Cascade)
+  events                    Event[]
 }
 
 model Event {
-  id             String             @id @default(cuid())
-  googleId       String             @unique
-  calendar       Calendar           @relation(fields: [calendarId], references: [id])
+  id             String     @id @default(cuid())
+  googleId       String     @unique
   calendarId     String
   status         String?
   htmlLink       String?
@@ -84,58 +82,43 @@ model Event {
   organizerEmail String?
   start          DateTime
   end            DateTime
+  contactId      String?
   reminders      Reminder[]
-  attendees      ContactsOnEvents[]
+  calendar       Calendar   @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  attendees      Contact[]  @relation("ContactToEvent")
 
   @@map("events")
 }
 
 model Reminder {
-  id          String                @id @default(cuid())
+  id          String   @id @default(cuid())
   timeToSend  DateTime
   rmdrType    String?
   rmdrText    String
-  event       Event                 @relation(fields: [eventId], references: [id])
   eventId     String
-  attendees   ContactsOnReminders[]
   readyToSend Boolean
-  sent        Boolean               @default(false)
-  canceled    Boolean               @default(false)
+  sent        Boolean  @default(false)
+  canceled    Boolean  @default(false)
+  contactId   String
+  attendee    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Contact {
-  id                 String                @id @default(cuid())
+  id                 String     @id @default(cuid())
   email              String
-  userOwner          User                  @relation(fields: [userOwnerId], references: [id])
   userOwnerId        String
   name               String?
-  reminder           ContactsOnReminders[]
   phoneNumber        Int?
-  sendReminders      Boolean               @default(true)
+  sendReminders      Boolean    @default(true)
   customReminderText String?
   customReminderTime Int?
-  events             ContactsOnEvents[]
+  userOwner          User       @relation(fields: [userOwnerId], references: [id], onDelete: Cascade)
+  reminder           Reminder[]
+  events             Event[]    @relation("ContactToEvent")
 
   @@unique([userOwnerId, email])
   @@unique([userOwnerId, phoneNumber])
-}
-
-model ContactsOnReminders {
-  reminder   Reminder @relation(fields: [reminderId], references: [id])
-  reminderId String
-  contact    Contact  @relation(fields: [contactId], references: [id])
-  contactId  String
-
-  @@id([reminderId, contactId])
-}
-
-model ContactsOnEvents {
-  event     Event   @relation(fields: [eventId], references: [id])
-  eventId   String
-  contact   Contact @relation(fields: [contactId], references: [id])
-  contactId String
-
-  @@id([eventId, contactId])
 }
 
 model Session {
