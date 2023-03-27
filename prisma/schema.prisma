@@ -66,6 +66,7 @@ model Calendar {
   X_Goog_Resource_Uri       String?
   X_Goog_Channel_Expiration DateTime?
   X_Goog_Resource_State     String?
+  syncToken                 String?
 }
 
 model Event {
@@ -104,12 +105,12 @@ model Reminder {
 
 model Contact {
   id                 String                @id @default(cuid())
-  email              String?
+  email              String
   userOwner          User                  @relation(fields: [userOwnerId], references: [id])
   userOwnerId        String
-  name               String
+  name               String?
   reminder           ContactsOnReminders[]
-  phoneNumber        Int
+  phoneNumber        Int?
   sendReminders      Boolean               @default(true)
   customReminderText String?
   customReminderTime Int?

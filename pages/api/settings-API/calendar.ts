@@ -63,15 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         }
                     }
                 });
-                res.json(calInDb.calendar[0]);
-                return;
+                return res.status(200).json(calInDb.calendar[0]);
             } catch (e) {
-                if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                    if (e.code === 'P2002') {
-                        console.log(e)
-                    }
-                }
-                throw e
+                console.log(e)
+                return res.status(400).json(e);
             }
         }
     })
