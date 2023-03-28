@@ -24,8 +24,6 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "name" TEXT,
     "userToken" TEXT,
-    "defRmndrStr" TEXT DEFAULT 'you have an upcoming appointment',
-    "defRmndrTime" INTEGER NOT NULL DEFAULT 36,
     "phoneNumber" INTEGER,
     "lastLogin" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -51,6 +49,7 @@ CREATE TABLE "Calendar" (
     "X_Goog_Resource_Uri" TEXT,
     "X_Goog_Channel_Expiration" TIMESTAMP(3),
     "X_Goog_Resource_State" TEXT,
+    "syncToken" TEXT,
 
     CONSTRAINT "Calendar_pkey" PRIMARY KEY ("id")
 );
@@ -84,6 +83,7 @@ CREATE TABLE "Reminder" (
     "readyToSend" BOOLEAN NOT NULL,
     "sent" BOOLEAN NOT NULL DEFAULT false,
     "canceled" BOOLEAN NOT NULL DEFAULT false,
+    "contactId" TEXT NOT NULL,
 
     CONSTRAINT "Reminder_pkey" PRIMARY KEY ("id")
 );
@@ -91,31 +91,34 @@ CREATE TABLE "Reminder" (
 -- CreateTable
 CREATE TABLE "Contact" (
     "id" TEXT NOT NULL,
-    "email" TEXT,
+    "email" TEXT NOT NULL,
     "userOwnerId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "phoneNumber" INTEGER NOT NULL,
+    "name" TEXT,
+    "phoneNumber" INTEGER,
     "sendReminders" BOOLEAN NOT NULL DEFAULT true,
-    "customReminderText" TEXT,
-    "customReminderTime" INTEGER,
 
     CONSTRAINT "Contact_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "ContactsOnReminders" (
-    "reminderId" TEXT NOT NULL,
-    "contactId" TEXT NOT NULL,
+CREATE TABLE "DefaultRemindersUser" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "time" INTEGER NOT NULL,
+    "text" TEXT NOT NULL,
 
-    CONSTRAINT "ContactsOnReminders_pkey" PRIMARY KEY ("reminderId","contactId")
+    CONSTRAINT "DefaultRemindersUser_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "ContactsOnEvents" (
-    "eventId" TEXT NOT NULL,
+CREATE TABLE "DefaultRemindersContact" (
+    "id" TEXT NOT NULL,
     "contactId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "time" INTEGER NOT NULL,
+    "text" TEXT NOT NULL,
 
-    CONSTRAINT "ContactsOnEvents_pkey" PRIMARY KEY ("eventId","contactId")
+    CONSTRAINT "DefaultRemindersContact_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -138,6 +141,12 @@ CREATE TABLE "verificationtokens" (
     CONSTRAINT "verificationtokens_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "_ContactToEvent" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "accounts_provider_provider_account_id_key" ON "accounts"("provider", "provider_account_id");
 
@@ -157,6 +166,12 @@ CREATE UNIQUE INDEX "Calendar_X_Goog_Resource_Id_key" ON "Calendar"("X_Goog_Reso
 CREATE UNIQUE INDEX "events_googleId_key" ON "events"("googleId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Contact_userOwnerId_email_key" ON "Contact"("userOwnerId", "email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Contact_userOwnerId_phoneNumber_key" ON "Contact"("userOwnerId", "phoneNumber");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "sessions_session_token_key" ON "sessions"("session_token");
 
 -- CreateIndex
@@ -165,32 +180,41 @@ CREATE UNIQUE INDEX "verificationtokens_token_key" ON "verificationtokens"("toke
 -- CreateIndex
 CREATE UNIQUE INDEX "verificationtokens_identifier_token_key" ON "verificationtokens"("identifier", "token");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "_ContactToEvent_AB_unique" ON "_ContactToEvent"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_ContactToEvent_B_index" ON "_ContactToEvent"("B");
+
 -- AddForeignKey
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_calOwnerId_fkey" FOREIGN KEY ("calOwnerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_calOwnerId_fkey" FOREIGN KEY ("calOwnerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "events" ADD CONSTRAINT "events_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Reminder" ADD CONSTRAINT "Reminder_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Reminder" ADD CONSTRAINT "Reminder_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contact" ADD CONSTRAINT "Contact_userOwnerId_fkey" FOREIGN KEY ("userOwnerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Reminder" ADD CONSTRAINT "Reminder_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactsOnReminders" ADD CONSTRAINT "ContactsOnReminders_reminderId_fkey" FOREIGN KEY ("reminderId") REFERENCES "Reminder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Contact" ADD CONSTRAINT "Contact_userOwnerId_fkey" FOREIGN KEY ("userOwnerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactsOnReminders" ADD CONSTRAINT "ContactsOnReminders_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "DefaultRemindersUser" ADD CONSTRAINT "DefaultRemindersUser_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactsOnEvents" ADD CONSTRAINT "ContactsOnEvents_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContactsOnEvents" ADD CONSTRAINT "ContactsOnEvents_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "DefaultRemindersContact" ADD CONSTRAINT "DefaultRemindersContact_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ContactToEvent" ADD CONSTRAINT "_ContactToEvent_A_fkey" FOREIGN KEY ("A") REFERENCES "Contact"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ContactToEvent" ADD CONSTRAINT "_ContactToEvent_B_fkey" FOREIGN KEY ("B") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;

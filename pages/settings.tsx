@@ -165,8 +165,6 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             },
             select: {
                 phoneNumber: true,
-                defRmndrStr: true,
-                defRmndrTime: true,
                 calendar: {
                     select: {
                         googleId: true

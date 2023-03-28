@@ -29,22 +29,21 @@ model Account {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  email         String     @unique
-  name          String?
-  userToken     String?
-  defRmndrStr   String?    @default("you have an upcoming appointment")
-  defRmndrTime  Int        @default(36)
-  phoneNumber   Int?
-  lastLogin     DateTime   @default(now())
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
-  emailVerified DateTime?
-  image         String?
-  calendar      Calendar[]
-  contacts      Contact[]
-  accounts      Account[]
-  sessions      Session[]
+  id               String                 @id @default(cuid())
+  email            String                 @unique
+  name             String?
+  userToken        String?
+  phoneNumber      Int?
+  lastLogin        DateTime               @default(now())
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  emailVerified    DateTime?
+  image            String?
+  calendar         Calendar[]
+  contacts         Contact[]
+  accounts         Account[]
+  sessions         Session[]
+  defaultReminders DefaultRemindersUser[]
 
   @@map("users")
 }
@@ -82,43 +81,58 @@ model Event {
   organizerEmail String?
   start          DateTime
   end            DateTime
-  contactId      String?
   reminders      Reminder[]
   calendar       Calendar   @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  attendees      Contact[]  @relation("ContactToEvent")
+  attendees      Contact[]
 
   @@map("events")
 }
 
 model Reminder {
-  id          String   @id @default(cuid())
-  timeToSend  DateTime
+  id          String  @id @default(cuid())
+  timeToSend  Int
   rmdrType    String?
   rmdrText    String
   eventId     String
   readyToSend Boolean
-  sent        Boolean  @default(false)
-  canceled    Boolean  @default(false)
+  sent        Boolean @default(false)
+  canceled    Boolean @default(false)
   contactId   String
-  attendee    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attendee    Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  event       Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Contact {
-  id                 String     @id @default(cuid())
-  email              String
-  userOwnerId        String
-  name               String?
-  phoneNumber        Int?
-  sendReminders      Boolean    @default(true)
-  customReminderText String?
-  customReminderTime Int?
-  userOwner          User       @relation(fields: [userOwnerId], references: [id], onDelete: Cascade)
-  reminder           Reminder[]
-  events             Event[]    @relation("ContactToEvent")
+  id               String                    @id @default(cuid())
+  email            String
+  userOwnerId      String
+  name             String?
+  phoneNumber      Int?
+  sendReminders    Boolean                   @default(true)
+  defaultReminders DefaultRemindersContact[]
+  userOwner        User                      @relation(fields: [userOwnerId], references: [id], onDelete: Cascade)
+  reminder         Reminder[]
+  events           Event[]
 
   @@unique([userOwnerId, email])
   @@unique([userOwnerId, phoneNumber])
+}
+
+model DefaultRemindersUser {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  time   Int
+  text   String
+}
+
+model DefaultRemindersContact {
+  id        String  @id @default(cuid())
+  contactId String
+  user      Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  userId    String
+  time      Int
+  text      String
 }
 
 model Session {
