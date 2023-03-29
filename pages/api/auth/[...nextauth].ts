@@ -25,9 +25,9 @@ if (ErrorGoogleEnv) {
             name: 'Mocked Google',
             async authorize(credentials: any) {
                 const user = {
-                    id: credentials?.name,
+                    id: credentials?.id,
                     name: credentials?.name,
-                    email: credentials?.name,
+                    email: credentials?.email,
                 }
                 return user
             },
@@ -81,7 +81,6 @@ export const authOptions: NextAuthOptions = {
         //@ts-ignore
         async signIn({ user, account, profile, email, credentials }) {
             const now = Date.now();
-            console.log('now at SignIn', now)
             const [google] = await prisma.account.findMany({
                 where: { userId: user.id, provider: "google" },
             });
@@ -101,12 +100,9 @@ export const authOptions: NextAuthOptions = {
                     },
                 })
             }
-            console.log('end of signin', account)
             return true
         },
         async session({ session, user }) {
-            const now = Date.now();
-            console.log('now at session', now)
             let tokens: TokenSet
             const [google] = await prisma.account.findMany({
                 where: { userId: user.id, provider: "google" },
@@ -155,6 +151,7 @@ export const authOptions: NextAuthOptions = {
             session.googleAccessToken = google.access_token;
             session.googleRefreshToken = tokens?.refresh_token ?? google?.refresh_token;
             session.expires_at = google.expires_at;
+            session.user.userId = user.id;
             return session
         },
 

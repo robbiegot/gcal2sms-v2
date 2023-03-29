@@ -30,7 +30,7 @@ export default function ContactsGrid({ contacts }) {
     const submitData = () => {
         return useCallback(
             async (method, info: GridRowModel | GridRowId) => {
-                const data = await fetch(`/api/contacts-API/`, {
+                const updatedInfo = await fetch(`/api/contacts-API/`, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(info)
@@ -42,7 +42,7 @@ export default function ContactsGrid({ contacts }) {
                 }).catch(error => {
                     return error;
                 })
-                return data;
+                return updatedInfo;
             }, [])
     }
     const mutateRow = submitData();
