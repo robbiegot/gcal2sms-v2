@@ -15,15 +15,8 @@ import {
     FormGroup,
     Button
 } from '@mui/material';
+import SettingsSlider from "../components/SettingsSlider";
 
-const Slider = React.forwardRef(function Transition(
-    props: TransitionProps & {
-        children: React.ReactElement<any, any>;
-    },
-    ref: React.Ref<unknown>,
-) {
-    return <Slide direction="up" ref={ref} {...props} />;
-});
 
 const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionStatusVals }) => {
     const { data: session, status } = useSession();
@@ -114,7 +107,7 @@ const Settings: React.FC<Props> = ({ accountSettings, readOnlyVals, submissionSt
                 open={true}
                 fullWidth={true}
                 maxWidth="xl"
-                TransitionComponent={Slider}
+                TransitionComponent={SettingsSlider}
                 onClose={handleCloseDialog}>
                 <DialogTitle>Settings</DialogTitle>
                 <DialogContent>

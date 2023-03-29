@@ -114,7 +114,7 @@ export default function ContactsGrid({ contacts }) {
         [mutateRow, rows]
     );
 
-    const handleProcessRowUpdateError = useCallback((error: PrismaClientKnownRequestError | PrismaClientUnknownRequestError) => {
+    const handleProcessRowUpdateError = useCallback((error: any) => {
         if (error.hasOwnProperty('code') && error.code === 'P2002') {
             setSnackbar({ children: 'A contact with this info already exists', severity: 'error' });
             return;

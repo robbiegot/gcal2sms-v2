@@ -17,6 +17,7 @@ import {
   Dialog,
   DialogContentText,
   DialogTitle,
+  linkClasses,
 } from '@mui/material'
 import AdbIcon from '@mui/icons-material/Adb';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -24,25 +25,19 @@ import GoogleIcon from '@mui/icons-material/Google';
 import { useTheme } from '@mui/material';
 
 const pages = ['Products', 'Pricing', 'Blog'];
-const settings = ['Home', 'Settings', 'Account', 'Logout'];
+const settings = [
+  { name: 'Home', link: '/' },
+  { name: 'Settings', link: '/settings' },
+  { name: 'Defaults', link: '/defaultReminders' },
+  { name: 'Contacts', link: '/contacts' },
+  { name: 'Logout', link: '/' }
+];
+
 
 
 const Header = () => {
   const theme = useTheme()
   const router = useRouter();
-
-  const fetchCalData = async () => {
-    try {
-      const req = await fetch('/api/get-google-data');
-      const newData = await req.json();
-      console.log(newData.results);
-      return;
-    } catch (error) {
-      console.log(error)
-    }
-
-  };
-
 
   const isActive: (pathname: string) => boolean = (pathname) => (router.pathname === pathname);
 
@@ -172,12 +167,11 @@ const Header = () => {
           </Box>
           {session &&
             <Box sx={{ flexGrow: 0 }}>
-              <Button onClick={() => fetchCalData()}>Get Calendar Data</Button>
               <Tooltip title="Open settings">
                 <IconButton
                   onClick={handleOpenUserMenu}
                   sx={{ p: 0 }}>
-                  <Avatar alt="Remy Sharp" src="../../../public/smilecal.jpeg" />
+                  <Avatar />
                 </IconButton>
               </Tooltip>
               <Menu
@@ -196,32 +190,25 @@ const Header = () => {
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
               >
-                {settings.map((setting) => {
-                  if (setting === 'Logout') {
+                {settings.map(({ name, link }) => {
+                  if (name === 'Logout') {
                     return (
-                      <MenuItem key={setting}
+                      <MenuItem key={name}
                         onClick={() => signOut()}
                       >
-                        <Typography textAlign="center">{setting}</Typography>
+                        <Typography textAlign="center">{name}</Typography>
                       </MenuItem>
                     )
                   }
-                  if (setting === 'Settings') {
+                  else {
                     return (
-                      <Link href="/settings" key={"link" + setting}>
-                        <MenuItem key={setting}>
-                          <Typography textAlign="center">{setting}</Typography>
+                      <Link href={link} key={`link + ${name}`}>
+                        <MenuItem key={name}>
+                          <Typography textAlign="center">{name}</Typography>
                         </MenuItem>
                       </Link>
                     )
                   }
-                  else return (
-                    <MenuItem key={setting}
-                      onClick={handleCloseUserMenu}
-                    >
-                      <Typography textAlign="center">{setting}</Typography>
-                    </MenuItem>
-                  )
                 })}
               </Menu>
             </Box>
