@@ -30,9 +30,10 @@ const timeUnits: string[] = ['minutes', 'hours', 'days'];
 
 
 const ConfigureReminders = ({ existingDefaults }) => {
+    console.log('existing defaults', existingDefaults)
     const { data: session, status } = useSession();
     const [reminders, setReminders] = useState(existingDefaults.map((reminder) => ({ ...reminder, editing: false })));
-    const [newReminder, setNewReminder] = useState({ time: undefined, timeUnit: 'hours', text: '', editing: false });
+    const [newReminder, setNewReminder] = useState({ time: 0, timeUnit: 'hours', text: '', editing: false });
     const [snackbar, setSnackbar] = useState<Pick<AlertProps, 'children' | 'severity'> | null>(null);
     const submitData = () => {
         return useCallback(
@@ -58,13 +59,14 @@ const ConfigureReminders = ({ existingDefaults }) => {
     const processReminderUpdate = useCallback(
         async (index?) => {
             try {
-                const reminderToSend = index ? reminders[index] : newReminder
+                const reminderToSend = (index !== undefined) ? reminders[index] : newReminder; //if index is undefined, we are creating a new reminder
                 const response = await mutateDefault("PATCH", reminderToSend);
                 if (index === undefined) {
                     setReminders((prev) => [...prev, { ...response, editing: false }]);
-                    setNewReminder({ time: undefined, timeUnit: 'hours', text: '', editing: false })
+                    setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: false }); 
                 } else {
                     setReminders(reminders.map((r) => (r.id === response.id ? { ...response, editing: false } : r)));
+
                 }
                 setSnackbar({ children: 'Contact successfully saved', severity: 'success' });
                 return response;
@@ -92,11 +94,11 @@ const ConfigureReminders = ({ existingDefaults }) => {
     const handleCloseSnackbar = () => setSnackbar(null);
 
     const handleCancelNewReminder = () => {
-        setNewReminder({ time: null, timeUnit: 'hours', text: '', editing: false });
+        setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: false });
     }
     const handleOpenNewReminder = () => {
         if (reminders.length < 3) {
-            setNewReminder({ time: null, timeUnit: 'hours', text: '', editing: true });
+            setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: true });
         } else {
             setSnackbar({ children: 'You can only have 3 default reminders', severity: 'error' });
         }
@@ -181,7 +183,6 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                             )
                                                         }
                                                         sx={{ marginRight: '16px' }}
-                                                        readOnly={!reminder.editing}
                                                         disabled={!reminder.editing}
                                                     >
                                                         {timeOptions.map((time) => (
@@ -203,7 +204,6 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                             )
                                                         }
                                                         sx={{ marginRight: '16px' }}
-                                                        readOnly={!reminder.editing}
                                                         disabled={!reminder.editing}
                                                     >
                                                         {timeUnits.map((unit) => (
@@ -285,7 +285,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                 value={newReminder.time}
                                                 size="small"
                                                 onChange={(e) =>
-                                                    setNewReminder({ ...newReminder, time: e.target.value })
+                                                    setNewReminder({ ...newReminder, time: e.target.value})
                                                 }
                                                 sx={{ marginRight: '16px', minWidth: '3vw' }}
                                             >
@@ -365,7 +365,26 @@ const ConfigureReminders = ({ existingDefaults }) => {
 
 export async function getServerSideProps({ req, res }) {
     const session = await getSession({ req });
-
+    const minutesToTimeUnitWithoutUnit = (time: number) => {
+        if (time / 60 / 24 >= 2) {
+            return {
+                time: time / 60 / 24,
+                timeUnit: 'days'
+            }
+    
+        } else if (time / 60 >= 2 || time / 60 === 1) {
+            return {
+                time: time / 60,
+                timeUnit: 'hours'
+            }
+        } else {
+            return {
+                time: time,
+                timeUnit: 'minutes'
+            }
+        }
+    };
+    
     if (!session) {
         return {
             redirect: {
@@ -375,11 +394,12 @@ export async function getServerSideProps({ req, res }) {
         };
     }
 
-    const existingDefaults = await prisma.defaultRemindersUser.findMany({
+    const reminderData = await prisma.defaultRemindersUser.findMany({
         where: {
             userId: session.user.userId,
         },
     });
+    const existingDefaults =  reminderData.map((r) => Object.assign(r, minutesToTimeUnitWithoutUnit(r.time)))
 
     return {
         props: {

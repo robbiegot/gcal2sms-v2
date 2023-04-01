@@ -34,7 +34,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         res.status(401).json({ message: 'Unauthorized' });
         return;
     }
-    console.log("req.body", req.body)
     if (req.method === 'PATCH') {
         const { id, time, timeUnit, text } = req.body;
         const idToUpdate = id ?? randomId();
@@ -65,7 +64,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         } catch (error) {
             return res.status(400).json(error);
         }
-    } else {
+    }
+    else {
         return res.status(405).json({ message: 'Method not allowed' });
     }
 };

@@ -89,17 +89,19 @@ model Event {
 }
 
 model Reminder {
-  id          String  @id @default(cuid())
-  timeToSend  Int
-  rmdrType    String?
-  rmdrText    String
-  eventId     String
-  readyToSend Boolean
-  sent        Boolean @default(false)
-  canceled    Boolean @default(false)
-  contactId   String
-  attendee    Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  event       Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  timeToSend   Int
+  rmdrType     String?
+  rmdrText     String
+  eventId      String
+  readyToSend  Boolean
+  sentToServer DateTime
+  sentToTwilio DateTime
+  completed    DateTime
+  canceled     Boolean  @default(false)
+  contactId    String
+  attendee     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model Contact {
