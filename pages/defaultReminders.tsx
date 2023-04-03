@@ -1,7 +1,7 @@
 import { useState, Fragment, useCallback } from 'react';
 import {
-    Box, Button, TextField, Typography, TextareaAutosize, Select, MenuItem, IconButton, Input, Snackbar,
-    Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Slide
+    Box, Button, TextField, Typography,  Select, MenuItem, IconButton, Input, Snackbar,
+    Dialog, DialogTitle, DialogContent, 
 } from '@mui/material';
 import { getSession, useSession } from 'next-auth/react';
 import { Delete as DeleteIcon, Edit as EditIcon, Close as CloseIcon, Check as CheckIcon } from '@mui/icons-material';
@@ -30,14 +30,14 @@ const timeUnits: string[] = ['minutes', 'hours', 'days'];
 
 
 const ConfigureReminders = ({ existingDefaults }) => {
-    console.log('existing defaults', existingDefaults)
     const { data: session, status } = useSession();
     const [reminders, setReminders] = useState(existingDefaults.map((reminder) => ({ ...reminder, editing: false })));
     const [newReminder, setNewReminder] = useState({ time: 0, timeUnit: 'hours', text: '', editing: false });
     const [snackbar, setSnackbar] = useState<Pick<AlertProps, 'children' | 'severity'> | null>(null);
-    const submitData = () => {
-        return useCallback(
-            async (method: string, info: Partial<displayReminder>) => {
+    const [selectedReminderOld, setSelectedReminderOld] = useState<string | null>(null);
+    
+    const submitData = useCallback(
+        async (method: string, info: Partial<displayReminder>) => {
                 const updatedReminder = await fetch(`/api/settings-API/reminders`, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
@@ -53,20 +53,18 @@ const ConfigureReminders = ({ existingDefaults }) => {
                 })
                 console.log('here is the updated reminder', updatedReminder)
                 return updatedReminder;
-            }, [])
-    }
-    const mutateDefault = submitData();
+            }, []) 
     const processReminderUpdate = useCallback(
         async (index?) => {
             try {
                 const reminderToSend = (index !== undefined) ? reminders[index] : newReminder; //if index is undefined, we are creating a new reminder
-                const response = await mutateDefault("PATCH", reminderToSend);
+                const response = await submitData("PATCH", reminderToSend);
                 if (index === undefined) {
                     setReminders((prev) => [...prev, { ...response, editing: false }]);
                     setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: false }); 
                 } else {
                     setReminders(reminders.map((r) => (r.id === response.id ? { ...response, editing: false } : r)));
-
+                    setSelectedReminderOld(null); 
                 }
                 setSnackbar({ children: 'Contact successfully saved', severity: 'success' });
                 return response;
@@ -74,12 +72,12 @@ const ConfigureReminders = ({ existingDefaults }) => {
                 setSnackbar({ children: 'There was an issue updating the contact', severity: 'error' });
             }
         },
-        [mutateDefault, reminders, newReminder]
+        [reminders, newReminder]
     );
     const processReminderDelete = useCallback(
         async (id) => {
-            const response = await mutateDefault("DELETE", { id: id });
-            if (response.hasOwnProperty('code')) {
+            const response = await submitData("DELETE", { id: id });
+            if (response.code) {
                 if (response.code === 'P2002') {
                     setSnackbar({ children: "there is already a record with that info", severity: 'error' });
                     return;
@@ -89,7 +87,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
             setSnackbar({ children: 'Contact successfully deleted', severity: 'success' });
             return response;
         },
-        [mutateDefault, reminders]
+        [reminders]
     );
     const handleCloseSnackbar = () => setSnackbar(null);
 
@@ -112,22 +110,31 @@ const ConfigureReminders = ({ existingDefaults }) => {
     }
     const handleSaveUpdateReminder = async (indexToSave) => {
         await processReminderUpdate(indexToSave);
+        setSelectedReminderOld(null); 
         return;
     }
-    const handleEditReminder = (indexToEdit) => {
+    const handleEditReminder = async (indexToEdit) => {
+        let selectedReminder;
         setReminders((prev) =>
-            prev.map((r, idx) =>
-                idx === indexToEdit ? { ...r, editing: true } : r
-            )
+            prev.map((r, idx) =>{
+                if (idx === indexToEdit) {
+                    selectedReminder = { ...r, editing: true }
+                    return selectedReminder;
+                }  else {
+                    return r
+                }
+                })
         );
+        await setSelectedReminderOld(JSON.stringify(selectedReminder));
         return;
     };
     const handleCancelEditReminder = (indexToCancel) => {
         setReminders((prev) =>
             prev.map((r, idx) =>
-                idx === indexToCancel ? { ...r, editing: false } : r
+                idx === indexToCancel ? { ...JSON.parse(selectedReminderOld), editing: false } : r
             )
         );
+        setSelectedReminderOld(null); 
     };
     const handleDeleteReminder = async (indexToDelete) => {
         await processReminderDelete(reminders[indexToDelete].id);
@@ -227,7 +234,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                     )
                                                 )
                                             }
-                                            sx={{ flexGrow: 1 }}
+                                            sx={{ flexGrow: 1, marginRight: '16px', marginLeft: '16px'}}
                                             disabled={!reminder.editing}
                                         />
                                         {reminder.editing ? (

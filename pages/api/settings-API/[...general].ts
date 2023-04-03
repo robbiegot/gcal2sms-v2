@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const result = await prisma.user.update({
             data: { [fieldToUpdate]: valueToChange },
             where: {
-                email: session.user.email,
+                email: session.user.email.toLowerCase(),
             },
             select: {
                 [fieldToUpdate]: true

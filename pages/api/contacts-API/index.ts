@@ -5,15 +5,14 @@ import { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const session = await getSession({ req });
-
     if (req.method === 'POST') {
-        const { id, name, phoneNumber, sendReminders, customReminderText, customReminderTime, email } = req.body;
+        const { id, name, phoneNumber, sendReminders, email } = req.body;
         try {
             const result = await prisma.user.update({
-                where: { email: session.user.email },
+                where: { email: session.user.email.toLowerCase() },
                 include: {
                     contacts: {
-                        where: { phoneNumber: phoneNumber }
+                        where: { email: email }
                     }
                 },
                 data: {
@@ -24,27 +23,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 name: name,
                                 phoneNumber: phoneNumber,
                                 sendReminders: sendReminders,
-                                customReminderText: customReminderText,
-                                customReminderTime: customReminderTime,
-                                email: email,
+                                email: email.toLowerCase(),
                             },
                             create: {
                                 id: id,
                                 name: name,
                                 phoneNumber: phoneNumber,
                                 sendReminders: sendReminders,
-                                customReminderText: customReminderText,
-                                customReminderTime: customReminderTime,
-                                email: email,
+                                email: email.toLowerCase(),
                             }
                         }
                     }
                 },
             });
-            console.log('result in api', result)
             res.status(200).send(result.contacts[0]);
         } catch (error) {
-            // console.log("line 47", error)
             res.status(400).json(error);
         };
     }

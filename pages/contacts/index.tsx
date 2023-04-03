@@ -17,7 +17,6 @@ import { getSession, useSession } from 'next-auth/react';
 import Alert, { AlertProps } from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import ContactsEditToolbar from '../../components/ContactsEditToolbar';
-import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from '@prisma/client/runtime';
 
 
 export default function ContactsGrid({ contacts }) {
@@ -25,7 +24,6 @@ export default function ContactsGrid({ contacts }) {
     const [rows, setRows] = useState<GridRowsProp>(contacts);
     const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
     const [snackbar, setSnackbar] = useState<Pick<AlertProps, 'children' | 'severity'> | null>(null);
-
 
     const submitData = () => {
         return useCallback(
@@ -35,10 +33,11 @@ export default function ContactsGrid({ contacts }) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(info)
                 }).then(async data => {
-                    const response = await data.json()
+                    const response = await data.json(); 
                     if (response.code) { //this means theres an error
                         throw response
                     }
+                    return response;
                 }).catch(error => {
                     return error;
                 })
@@ -80,12 +79,11 @@ export default function ContactsGrid({ contacts }) {
     const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
         setRowModesModel(newRowModesModel);
     };
-
     const processRowUpdate = useCallback(
         async (newRow: GridRowModel) => {
             try {
                 const response = await mutateRow("POST", newRow);
-                if (!response.hasOwnProperty('id')) {
+                if (!response.id) {
                     throw response;
                 }
                 setRows(rows.map((row) => (row.id === response.id ? { ...response, isNew: false } : row)));
@@ -97,11 +95,11 @@ export default function ContactsGrid({ contacts }) {
         },
         [mutateRow, rows]
     );
-
     const processRowDelete = useCallback(
         async (id: GridRowId) => {
             const response = await mutateRow("DELETE", id);
-            if (response.hasOwnProperty('code')) {
+            console.log('here is the response', response)
+            if (response.code) {
                 if (response.code === 'P2002') {
                     setSnackbar({ children: "there is already a record with that info", severity: 'error' });
                     return;
@@ -113,9 +111,8 @@ export default function ContactsGrid({ contacts }) {
         },
         [mutateRow, rows]
     );
-
     const handleProcessRowUpdateError = useCallback((error: any) => {
-        if (error.hasOwnProperty('code') && error.code === 'P2002') {
+        if (error.code && error.code === 'P2002') {
             setSnackbar({ children: 'A contact with this info already exists', severity: 'error' });
             return;
         }
@@ -195,7 +192,7 @@ export default function ContactsGrid({ contacts }) {
             preProcessEditCellProps: (params: GridPreProcessEditCellProps) => {
                 if (!params.props.value) return { ...params.props, error: false };
                 const input = params?.props?.value.toString();
-                if (input.length >= 10) {
+                if (input?.length >= 10) {
                     const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
                     const number = phoneUtil.parse(input, 'US')
                     const hasError = (phoneUtil.isValidNumberForRegion(number, 'US') === false);
@@ -204,8 +201,8 @@ export default function ContactsGrid({ contacts }) {
 
             },
             valueFormatter: (params: GridValueFormatterParams): any => {
-                const input = params.value.toString();
-                if (input.length >= 10) {
+                const input = params?.value?.toString();
+                if (input?.length >= 10) {
                     const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
                     const number = phoneUtil.parse(input, 'US');
                     return phoneUtil.formatInOriginalFormat(number, 'US')
@@ -219,23 +216,6 @@ export default function ContactsGrid({ contacts }) {
             type: 'boolean',
             editable: true,
         },
-        {
-            width: 69,
-            headerName: 'Custom Timing',
-            type: 'number',
-            field: 'customReminderTime',
-            editable: true,
-            align: 'left',
-            sortable: false,
-        },
-        {
-            width: 500,
-            headerName: 'Custom Reminder Text?',
-            field: 'customReminderText',
-            editable: true,
-        },
-
-
     ];
 
     return (
@@ -360,7 +340,6 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
             },
         }
     } catch (error) {
-        console.log('theres been an error in settings 325', error)
         return {
             props: {
                 contacts: []

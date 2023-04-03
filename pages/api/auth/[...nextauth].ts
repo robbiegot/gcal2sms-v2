@@ -27,7 +27,7 @@ if (ErrorGoogleEnv) {
                 const user = {
                     id: credentials?.id,
                     name: credentials?.name,
-                    email: credentials?.email,
+                    email: credentials?.email.toLowerCase(),
                 }
                 return user
             },
@@ -59,7 +59,7 @@ if (ErrorGoogleEnv) {
                 return {
                     id: profile.sub,
                     name: profile.name,
-                    email: profile.email,
+                    email: profile.email.toLowerCase(),
                     image: profile.picture,
                 } as any
             },
