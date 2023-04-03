@@ -1,4 +1,4 @@
-import { useState, Fragment, useCallback } from 'react';
+import { useState, Fragment, useCallback, useRef } from 'react';
 import {
     Box, Button, TextField, Typography,  Select, MenuItem, IconButton, Input, Snackbar,
     Dialog, DialogTitle, DialogContent, 
@@ -11,10 +11,12 @@ import Layout from '../components/Layout';
 import SettingsSlider from '../components/SettingsSlider';
 import { useRouter } from 'next/router';
 import prisma from '../lib/prisma';
+import { v4 as randomId } from 'uuid';
 
 interface displayReminder extends Partial<DefaultRemindersUser> {
     editing: boolean;
     timeUnit: string;
+    newReminder: boolean;
 }
 
 const timeOptions: number[] = [
@@ -31,11 +33,11 @@ const timeUnits: string[] = ['minutes', 'hours', 'days'];
 
 const ConfigureReminders = ({ existingDefaults }) => {
     const { data: session, status } = useSession();
-    const [reminders, setReminders] = useState(existingDefaults.map((reminder) => ({ ...reminder, editing: false })));
-    const [newReminder, setNewReminder] = useState({ time: 0, timeUnit: 'hours', text: '', editing: false });
+    const [reminders, setReminders] = useState(existingDefaults.map((reminder) => ({ ...reminder, editing: false, newReminder: false})));
     const [snackbar, setSnackbar] = useState<Pick<AlertProps, 'children' | 'severity'> | null>(null);
-    const [selectedReminderOld, setSelectedReminderOld] = useState<string | null>(null);
-    
+    const previousReminderValue = useRef(null);
+    const [editing, setEditing] = useState(false);
+       
     const submitData = useCallback(
         async (method: string, info: Partial<displayReminder>) => {
                 const updatedReminder = await fetch(`/api/settings-API/reminders`, {
@@ -54,28 +56,35 @@ const ConfigureReminders = ({ existingDefaults }) => {
                 console.log('here is the updated reminder', updatedReminder)
                 return updatedReminder;
             }, []) 
-    const processReminderUpdate = useCallback(
+    const handleSaveReminder = useCallback(
         async (index?) => {
             try {
-                const reminderToSend = (index !== undefined) ? reminders[index] : newReminder; //if index is undefined, we are creating a new reminder
-                const response = await submitData("PATCH", reminderToSend);
-                if (index === undefined) {
-                    setReminders((prev) => [...prev, { ...response, editing: false }]);
-                    setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: false }); 
-                } else {
-                    setReminders(reminders.map((r) => (r.id === response.id ? { ...response, editing: false } : r)));
-                    setSelectedReminderOld(null); 
+                const targetReminder = index ? reminders[index] : reminders.filter((r) => r.editing === true)[0];
+                if (targetReminder.text === previousReminderValue.current.text  && 
+                    targetReminder.time === previousReminderValue.current.time && 
+                    targetReminder.timeUnit === previousReminderValue.current.timeUnit) {
+                        setSnackbar({ children: 'No Changes were made, please make changes before saving', severity: 'warning' });
+                        return;
+                    }
+                if (targetReminder.text === '') {
+                    setSnackbar({ children: 'Please enter text for the reminder', severity: 'warning' });
+                    return;
                 }
+                const response = await submitData("PATCH", targetReminder);
+                setReminders(reminders.map((r) => (r.id === response.id ? { ...response, editing: false, newReminder: false } : r)));
+                setEditing(false);
                 setSnackbar({ children: 'Contact successfully saved', severity: 'success' });
+                previousReminderValue.current = null; 
                 return response;
             } catch (error) {
                 setSnackbar({ children: 'There was an issue updating the contact', severity: 'error' });
             }
         },
-        [reminders, newReminder]
+        [reminders]
     );
-    const processReminderDelete = useCallback(
-        async (id) => {
+    const handleDeleteReminder = useCallback(
+        async (index) => {
+            const id = reminders[index].id;
             const response = await submitData("DELETE", { id: id });
             if (response.code) {
                 if (response.code === 'P2002') {
@@ -89,55 +98,51 @@ const ConfigureReminders = ({ existingDefaults }) => {
         },
         [reminders]
     );
-    const handleCloseSnackbar = () => setSnackbar(null);
-
-    const handleCancelNewReminder = () => {
-        setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: false });
-    }
     const handleOpenNewReminder = () => {
-        if (reminders.length < 3) {
-            setNewReminder({ time: 0, timeUnit: 'hours', text: '', editing: true });
+        if (reminders.length < 3 && !editing) {
+            const newReminder = { id: randomId(), time: 0, timeUnit: 'hours', text: '', editing: true, newReminder: true};
+            setReminders((prev) => [...prev, newReminder]);
+            previousReminderValue.current = newReminder; 
+            setEditing(true); 
         } else {
-            setSnackbar({ children: 'You can only have 3 default reminders', severity: 'error' });
+            if (editing)   {
+                setSnackbar({ children: 'You are already editing a reminder', severity: 'error' });
+            } 
+            if (reminders.length >= 3) {
+                setSnackbar({ children: 'You can only have 2 default reminders', severity: 'error' });
+            }
         }
-        return;
-    }
-    const handleSaveNewReminder = async () => {
-        if (newReminder.time !== undefined && newReminder.text !== '') {
-            await processReminderUpdate();
-        }
-        return;
-    }
-    const handleSaveUpdateReminder = async (indexToSave) => {
-        await processReminderUpdate(indexToSave);
-        setSelectedReminderOld(null); 
         return;
     }
     const handleEditReminder = async (indexToEdit) => {
-        let selectedReminder;
-        setReminders((prev) =>
-            prev.map((r, idx) =>{
-                if (idx === indexToEdit) {
-                    selectedReminder = { ...r, editing: true }
-                    return selectedReminder;
-                }  else {
-                    return r
-                }
+        if (!editing) {
+            setEditing(true);
+            setReminders((prev) =>
+                prev.map((r, idx) =>{
+                    if (idx === indexToEdit) {
+                        previousReminderValue.current = {...r};
+                        return { ...r, editing: true };
+                    }  else {
+                        return r
+                    }
                 })
-        );
-        await setSelectedReminderOld(JSON.stringify(selectedReminder));
+            );
+            
+        } else {
+            if (editing)   {
+                setSnackbar({ children: 'You are already editing a reminder', severity: 'error' });
+            } 
+        }
         return;
     };
     const handleCancelEditReminder = (indexToCancel) => {
-        setReminders((prev) =>
-            prev.map((r, idx) =>
-                idx === indexToCancel ? { ...JSON.parse(selectedReminderOld), editing: false } : r
-            )
-        );
-        setSelectedReminderOld(null); 
-    };
-    const handleDeleteReminder = async (indexToDelete) => {
-        await processReminderDelete(reminders[indexToDelete].id);
+        if (reminders[indexToCancel].newReminder) {
+            setReminders((prev) => prev.filter((r, idx) => !r.newReminder));
+        } else {
+            setReminders((prev) => prev.map((r, idx) => idx === indexToCancel ? {...previousReminderValue.current} : r));
+            previousReminderValue.current = null; 
+        }
+        setEditing(false);
     };
     const router = useRouter();
     const handleCloseDialog = (event, reason) => {
@@ -147,6 +152,8 @@ const ConfigureReminders = ({ existingDefaults }) => {
         }
         return;
     }
+    const handleCloseSnackbar = () => setSnackbar(null);
+
     return (
         <Layout>
             <Dialog
@@ -242,7 +249,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                 <IconButton
                                                     edge="end"
                                                     color="inherit"
-                                                    onClick={() => handleSaveUpdateReminder(index)}
+                                                    onClick={() => handleSaveReminder(index)}
                                                     sx={{ verticalAlign: 'top' }}
                                                 >
                                                     <CheckIcon />
@@ -257,6 +264,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                 </IconButton>
                                             </Fragment>
                                         ) : (
+                                            <Fragment>
                                             <IconButton
                                                 edge="end"
                                                 color="inherit"
@@ -265,85 +273,26 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                             >
                                                 <EditIcon />
                                             </IconButton>
+                                             <IconButton
+                                             edge="end"
+                                             color="inherit"
+                                             onClick={() => handleDeleteReminder(index)}
+                                             sx={{ verticalAlign: 'top' }}
+                                         >
+                                             <DeleteIcon />
+                                         </IconButton>
+                                         </Fragment>
                                         )}
-                                        <IconButton
-                                            edge="end"
-                                            color="inherit"
-                                            onClick={() => handleDeleteReminder(index)}
-                                            sx={{ verticalAlign: 'top' }}
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
                                     </Box>
                                 </Fragment>
                             )
                         })
                         }
                         <Box sx={{ marginTop: '10%' }}>
-                            {newReminder.editing ? (
-                                <>
-                                    <Typography variant="h4">
-                                        Add New Reminder
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', marginBottom: '16px' }}>
-                                        <Box display="flex" sx={{ minWidth: '13vw', maxWidth: '13vw' }}>
-                                            <Select
-                                                label="Reminder time"
-                                                value={newReminder.time}
-                                                size="small"
-                                                onChange={(e) =>
-                                                    setNewReminder({ ...newReminder, time: e.target.value})
-                                                }
-                                                sx={{ marginRight: '16px', minWidth: '3vw' }}
-                                            >
-                                                {timeOptions.map((time) => (
-                                                    <MenuItem key={`time-${time}`} value={time}>
-                                                        {time}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                            <Select
-                                                value={newReminder.timeUnit}
-                                                size="small"
-                                                onChange={(e) => {
-                                                    console.log(newReminder)
-                                                    return setNewReminder({ ...newReminder, timeUnit: e.target.value })
-                                                }
-                                                }
-                                                sx={{ marginRight: '16px' }}
-                                            >
-                                                {timeUnits.map((unit) => (
-                                                    <MenuItem key={`unit-${unit}`} value={unit}>
-                                                        {unit}
-                                                    </MenuItem>
-
-                                                ))}
-                                            </Select>
-                                        </Box>
-                                        <TextField
-                                            label="Reminder text"
-                                            value={newReminder.text}
-                                            multiline={true}
-                                            fullWidth={true}
-                                            onChange={(e) =>
-                                                setNewReminder({ ...newReminder, text: e.target.value })
-                                            }
-                                            InputProps={{
-                                                endAdornment:
-                                                    <IconButton
-                                                        edge="end"
-                                                        onClick={handleCancelNewReminder}
-                                                    >
-                                                        <CloseIcon />
-                                                    </IconButton>
-
-                                            }}
-                                        />
-                                    </Box>
-                                    <Button variant="contained" color="secondary" onClick={handleSaveNewReminder}>
+                            { editing ? (
+                                    <Button variant="contained" color="secondary" onClick={handleSaveReminder}>
                                         Save reminder
                                     </Button>
-                                </>
                             ) : (
                                 <Button variant="contained" color="primary" onClick={handleOpenNewReminder} style={{ marginTop: '3vh' }}>
                                     Add reminder
