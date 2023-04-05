@@ -98,7 +98,6 @@ export default function ContactsGrid({ contacts }) {
     const processRowDelete = useCallback(
         async (id: GridRowId) => {
             const response = await mutateRow("DELETE", id);
-            console.log('here is the response', response)
             if (response.code) {
                 if (response.code === 'P2002') {
                     setSnackbar({ children: "there is already a record with that info", severity: 'error' });
@@ -205,7 +204,7 @@ export default function ContactsGrid({ contacts }) {
                 if (input?.length >= 10) {
                     const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
                     const number = phoneUtil.parse(input, 'US');
-                    return phoneUtil.formatInOriginalFormat(number, 'US')
+                    return phoneUtil.formatOutOfCountryCallingNumber(number, 'US')
                 }
             },
         },

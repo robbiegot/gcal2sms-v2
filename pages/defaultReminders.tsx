@@ -31,8 +31,7 @@ const timeUnits: string[] = ['minutes', 'hours', 'days'];
 
 
 
-const ConfigureReminders = ({ existingDefaults }) => {
-    const { data: session, status } = useSession();
+const ConfigureReminders = ({ existingDefaults, session }) => {
     const [reminders, setReminders] = useState(existingDefaults.map((reminder) => ({ ...reminder, editing: false, newReminder: false})));
     const [snackbar, setSnackbar] = useState<Pick<AlertProps, 'children' | 'severity'> | null>(null);
     const previousReminderValue = useRef(null);
@@ -60,6 +59,8 @@ const ConfigureReminders = ({ existingDefaults }) => {
         async (index?) => {
             try {
                 const targetReminder = index ? reminders[index] : reminders.filter((r) => r.editing === true)[0];
+                console.log('target reminder', reminders)
+                console.log(targetReminder)
                 if (targetReminder.text === previousReminderValue.current.text  && 
                     targetReminder.time === previousReminderValue.current.time && 
                     targetReminder.timeUnit === previousReminderValue.current.timeUnit) {
@@ -77,6 +78,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                 previousReminderValue.current = null; 
                 return response;
             } catch (error) {
+                console.log(error)
                 setSnackbar({ children: 'There was an issue updating the contact', severity: 'error' });
             }
         },
@@ -173,16 +175,14 @@ const ConfigureReminders = ({ existingDefaults }) => {
                             return (
                                 <Fragment key={`reminder-${index}`}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', marginTop: '1em' }}>
-                                        <Box display="flex" sx={{ minWidth: '15%', maxWidth: '15%' }}>
                                             {!reminder.editing ? (
-                                                <Box>
                                                     <TextField
                                                         label="Reminder time"
                                                         value={reminderText}
                                                         onChange={(e) => setReminders((prev) => prev.map((r, idx) => idx === index ? { ...r, time: e.target.value } : r))}
                                                         disabled={!reminder.editing}
                                                     />
-                                                </Box>) : (
+                                               ) : (
                                                 <Box display="flex">
                                                     <Select
                                                         label="Reminder time"
@@ -229,7 +229,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                                     </Select>
                                                 </Box>
                                             )}
-                                        </Box>
+                                     
                                         <TextField
                                             value={reminder.text}
                                             multiline={true}
@@ -265,22 +265,22 @@ const ConfigureReminders = ({ existingDefaults }) => {
                                             </Fragment>
                                         ) : (
                                             <Fragment>
-                                            <IconButton
+                                                <IconButton
+                                                    edge="end"
+                                                    color="inherit"
+                                                    onClick={() => handleEditReminder(index)}
+                                                    sx={{ verticalAlign: 'top' }}
+                                                >
+                                                    <EditIcon />
+                                                </IconButton>
+                                                <IconButton
                                                 edge="end"
                                                 color="inherit"
-                                                onClick={() => handleEditReminder(index)}
+                                                onClick={() => handleDeleteReminder(index)}
                                                 sx={{ verticalAlign: 'top' }}
-                                            >
-                                                <EditIcon />
+                                                >
+                                                    <DeleteIcon />
                                             </IconButton>
-                                             <IconButton
-                                             edge="end"
-                                             color="inherit"
-                                             onClick={() => handleDeleteReminder(index)}
-                                             sx={{ verticalAlign: 'top' }}
-                                         >
-                                             <DeleteIcon />
-                                         </IconButton>
                                          </Fragment>
                                         )}
                                     </Box>
@@ -290,7 +290,7 @@ const ConfigureReminders = ({ existingDefaults }) => {
                         }
                         <Box sx={{ marginTop: '10%' }}>
                             { editing ? (
-                                    <Button variant="contained" color="secondary" onClick={handleSaveReminder}>
+                                    <Button variant="contained" color="secondary" onClick={() => handleSaveReminder()}>
                                         Save reminder
                                     </Button>
                             ) : (
@@ -344,7 +344,7 @@ export async function getServerSideProps({ req, res }) {
     if (!session) {
         return {
             redirect: {
-                destination: '/signin',
+                destination: '/auth/signin',
                 permanent: false,
             },
         };
@@ -360,6 +360,7 @@ export async function getServerSideProps({ req, res }) {
     return {
         props: {
             existingDefaults,
+            session: session,
         },
     };
 }

@@ -1,12 +1,19 @@
 import { getSession } from 'next-auth/react';
 import prisma from '../../../lib/prisma';
 import { NextApiRequest, NextApiResponse } from 'next'
+import libphonenumber, { PhoneNumberFormat } from 'google-libphonenumber';
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const session = await getSession({ req });
     if (req.method === 'POST') {
         const { id, name, phoneNumber, sendReminders, email } = req.body;
+
+        const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
+        const number = phoneUtil.parse(String(phoneNumber), 'US');
+        const phoneNumberDB = phoneUtil.format(number, PhoneNumberFormat.E164);
+  
+    
         try {
             const result = await prisma.user.update({
                 where: { email: session.user.email.toLowerCase() },
@@ -21,14 +28,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             where: { id: id },
                             update: {
                                 name: name,
-                                phoneNumber: phoneNumber,
+                                phoneNumber: phoneNumberDB,
                                 sendReminders: sendReminders,
                                 email: email.toLowerCase(),
                             },
                             create: {
                                 id: id,
                                 name: name,
-                                phoneNumber: phoneNumber,
+                                phoneNumber: phoneNumberDB,
                                 sendReminders: sendReminders,
                                 email: email.toLowerCase(),
                             }

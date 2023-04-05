@@ -1,26 +1,34 @@
 import { getSession } from 'next-auth/react';
 import prisma from '../../../lib/prisma';
 import { NextApiRequest, NextApiResponse } from 'next'
-
+import libphonenumber, { PhoneNumberFormat } from 'google-libphonenumber';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const session = await getSession({ req });
-    const { componentName, textSubmission } = req.body;
+    const { componentName,value } = req.body;
+    let valueToChange = value;
 
-    const fieldToUpdate = componentName;
-    const valueToChange = (componentName === "defRmndrTime" || componentName === "phoneNumber") ? Number(textSubmission) : String(textSubmission)
+    if (componentName === "phoneNumber") {
+        const phoneUtil = libphonenumber.PhoneNumberUtil.getInstance();
+        const number = phoneUtil.parse(value, 'US');
+        valueToChange = phoneUtil.format(number, PhoneNumberFormat.E164);
+    }
+    console.log('componentName', componentName)
+
+    console.log('valueToChange', valueToChange)
     try {
         const result = await prisma.user.update({
-            data: { [fieldToUpdate]: valueToChange },
-            where: {
-                email: session.user.email.toLowerCase(),
-            },
+            data: { [componentName]: valueToChange },
+            where: { email: session.user.email.toLowerCase() },
             select: {
-                [fieldToUpdate]: true
+                [componentName]: true
             }
         });
         res.json(result);
+        console.log("heres the result", result)
     } catch (error) {
+        console.log("heres the error", error)
+
         res.json("there was an issue" + error);
     };
 }

@@ -10,7 +10,8 @@ import {
 import CheckIcon from '@mui/icons-material/Check';
 
 
-const SettingsTextField = ({ componentName, readOnlyVal, handleReadOnlyChange, initialValue, submitData, submissionStatus }) => {
+const SettingsTextField = ({ info, handleReadOnlyChange,  submitData, handleTyping}) => {
+    const { readOnly, value, submissionStatus, label, componentName } = info;
     const inputRef = useRef(componentName);
 
     return (
@@ -20,28 +21,28 @@ const SettingsTextField = ({ componentName, readOnlyVal, handleReadOnlyChange, i
             type='text'
             inputRef={inputRef}
             id={componentName}
-            label={componentName}
-            disabled={readOnlyVal}
-            defaultValue={readOnlyVal ? undefined : initialValue}
-            variant={readOnlyVal ? 'filled' : 'outlined'}
-            value={readOnlyVal ? initialValue : undefined}
+            label={label}
+            disabled={readOnly}
+            variant={readOnly ? 'filled' : 'outlined'}
+            value={value ? value : ''}
+            onChange={(e) => handleTyping(e, componentName)}
             InputProps={{
-                readOnly: readOnlyVal,
+                readOnly: readOnly,
                 endAdornment: (
                     <InputAdornment position="end">
                         {submissionStatus && <CheckIcon color="success" />}
                         <Button
                             onClick={(e) => {
-                                if (!readOnlyVal && inputRef.current.value !== initialValue) {
-                                    submitData(e, componentName, inputRef.current.value)
+                                if (!readOnly) {
+                                    submitData(componentName, inputRef.current.value)
                                 };
                                 handleReadOnlyChange(componentName);
                             }}
                             type="submit"
                             variant="contained">
-                            {readOnlyVal ? 'Click To Edit' : 'Submit Change'}
+                            {readOnly ? 'Click To Edit' : 'Submit Change'}
                         </Button>
-                        {!readOnlyVal &&
+                        {!readOnly &&
                             <Button
                                 onClick={() => handleReadOnlyChange(componentName)}
                                 type="button"

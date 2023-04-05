@@ -33,7 +33,7 @@ model User {
   email            String                 @unique
   name             String?
   userToken        String?
-  phoneNumber      Int?
+  phoneNumber      String?
   lastLogin        DateTime               @default(now())
   createdAt        DateTime               @default(now()) @map("created_at")
   updatedAt        DateTime               @updatedAt @map("updated_at")
@@ -111,7 +111,7 @@ model Contact {
   email            String                    @unique
   userOwnerId      String
   name             String?
-  phoneNumber      Int?
+  phoneNumber      String?
   sendReminders    Boolean                   @default(true)
   defaultReminders DefaultRemindersContact[]
   userOwner        User                      @relation(fields: [userOwnerId], references: [id], onDelete: Cascade)

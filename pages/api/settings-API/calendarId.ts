@@ -9,7 +9,7 @@ import { BodyResponseCallback } from 'googleapis/build/src/apis/abusiveexperienc
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const session: Session = await getSession({ req });
-    const { calendarId }: { calendarId: string } = req.body;
+    const {value : calendarId, componentName } = req.body;
 
     const auth: OAuth2Client = new google.auth.OAuth2({
         clientId: process.env.GOOGLE_CLIENT_ID,
@@ -63,15 +63,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         }
                     }
                 });
-                return res.status(200).json(calInDb.calendar[0]);
+                return res.status(200).json({[componentName]: calInDb.calendar[0].googleId});
             } catch (e) {
                 console.log(e)
                 return res.status(400).json(e);
             }
         }
     })
-
-
+    return 
 }
 
 

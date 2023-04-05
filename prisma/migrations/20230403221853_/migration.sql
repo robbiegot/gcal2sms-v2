@@ -24,7 +24,7 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "name" TEXT,
     "userToken" TEXT,
-    "phoneNumber" INTEGER,
+    "phoneNumber" TEXT,
     "lastLogin" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -76,14 +76,18 @@ CREATE TABLE "events" (
 -- CreateTable
 CREATE TABLE "Reminder" (
     "id" TEXT NOT NULL,
-    "timeToSend" TIMESTAMP(3) NOT NULL,
+    "timeToSend" INTEGER NOT NULL,
     "rmdrType" TEXT,
     "rmdrText" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
-    "readyToSend" BOOLEAN NOT NULL,
-    "sent" BOOLEAN NOT NULL DEFAULT false,
+    "readyToSend" BOOLEAN NOT NULL DEFAULT false,
+    "sentToServer" TIMESTAMP(3),
+    "sentToTwilio" TIMESTAMP(3),
+    "completed" TIMESTAMP(3),
     "canceled" BOOLEAN NOT NULL DEFAULT false,
     "contactId" TEXT NOT NULL,
+    "twilioSid" TEXT,
+    "twilioStatus" TEXT,
 
     CONSTRAINT "Reminder_pkey" PRIMARY KEY ("id")
 );
@@ -94,7 +98,7 @@ CREATE TABLE "Contact" (
     "email" TEXT NOT NULL,
     "userOwnerId" TEXT NOT NULL,
     "name" TEXT,
-    "phoneNumber" INTEGER,
+    "phoneNumber" TEXT,
     "sendReminders" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "Contact_pkey" PRIMARY KEY ("id")
@@ -164,6 +168,12 @@ CREATE UNIQUE INDEX "Calendar_X_Goog_Resource_Id_key" ON "Calendar"("X_Goog_Reso
 
 -- CreateIndex
 CREATE UNIQUE INDEX "events_googleId_key" ON "events"("googleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Reminder_twilioSid_key" ON "Reminder"("twilioSid");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Contact_email_key" ON "Contact"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Contact_userOwnerId_email_key" ON "Contact"("userOwnerId", "email");

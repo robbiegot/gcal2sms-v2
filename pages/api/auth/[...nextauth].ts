@@ -51,7 +51,7 @@ if (ErrorGoogleEnv) {
                 params: {
                     access_type: 'offline',
                     prompt: 'consent',
-                    scope: "https://www.googleapis.com/auth/calendar.readonly openid profile email",
+                    scope: "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/contacts.readonly openid profile email",
                 },
             },
             profile(profile: any) {

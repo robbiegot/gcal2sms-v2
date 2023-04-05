@@ -1,8 +1,5 @@
 import React, { Props } from "react"
 import Layout from "../components/Layout"
-import { useRouter } from "next/router"
-import { useSession } from "next-auth/react"
-import { GetServerSideProps } from "next"
 import prisma from "../lib/prisma"
 import { getSession } from "next-auth/react"
 import Calendar from "../components/Calendar"
@@ -10,18 +7,11 @@ import { Event } from "@prisma/client"
 
 type appPageProps = {
   events?: eventsProp
+  session?: any
 }
 type eventsProp = Omit<Event, 'created' | 'updated' | 'start' | 'end'> & { created: string, updated: string, start: string, end: string }[] | undefined;
 
-const CalendarApp: React.FC<appPageProps> = ({ events }) => {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  if (status === "unauthenticated") {
-    router.replace('/auth/signin')
-    return null;
-  }
-
+const CalendarApp: React.FC<appPageProps> = ({ events, session }) => {
   return (
     <Layout>
       <Calendar events={events} />
@@ -67,7 +57,8 @@ export const getServerSideProps = async ({ req, res }) => {
 
     return {
       props: {
-        events
+        events,
+        session
       }
     };
   } catch (error) {
