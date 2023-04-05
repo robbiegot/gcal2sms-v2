@@ -408,7 +408,6 @@ export default function TableSortAndSelection() {
                   aria-checked={isItemSelected}
                   tabIndex={-1}
                   key={row.name}
-                  selected={isItemSelected}
                   style={
                     isItemSelected
                       ? ({
