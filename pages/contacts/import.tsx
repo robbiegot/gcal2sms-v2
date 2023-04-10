@@ -7,49 +7,36 @@ import Checkbox from '@mui/joy/Checkbox';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import IconButton from '@mui/joy/IconButton';
-import Link from '@mui/joy/Link';
-import Tooltip from '@mui/joy/Tooltip';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
-import DeleteIcon from '@mui/icons-material/Delete';
-import FilterListIcon from '@mui/icons-material/FilterList';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { StyledEngineProvider, CssVarsProvider } from '@mui/joy/styles';
-import { visuallyHidden } from "@mui/utils";
-
-
+import Layout from '../../components/Layout';
+import { ImportContactTableHead } from '../../components/ContactImportHeader';
+import { ImportContactToolbar } from '../../components/ContactImportToolbar';
+import { getSession } from 'next-auth/react';
+import { google } from 'googleapis';
 
 interface Data {
     email: string;
     name: string;
     phoneNumber?: string;
+    secondaryPhoneNumber?: string;
     secondaryEmail?: string;
     tertiaryEmail?: string;
 }
 
-function createData(
-    email: string,
-    name: string,
-    phoneNumber?: string,
-    secondaryEmail?: string,
-    tertiaryEmail?: string,
-  ): Data {
-  return {
-    name,
-    email,
-    secondaryEmail,
-    tertiaryEmail,
-    phoneNumber,
-  };
+interface Contact {
+  resourceName?: string;
+  names?: Array<{ displayName?: string }>;
+  emailAddresses?: Array<{ value?: string }>;
+  phoneNumbers?: Array<{ value?: string, canonicalForm?:string }>;
 }
-
-const rows = [
-  createData( 'Robertigottlieb@gmail.com', 'Robbie Gottlieb',  '2015724343', 'RobbieGTutor@gmail.com'), 
-  createData( 'RobbieGTutor@gmail.com', 'Rob Gottlieb',  '2015724343', 'RobbieGTutor@gmail.com'), 
-  createData( 'RobbieGottlieb.dev@gmail.com', 'Bob Gottlieb',  '2015724343', 'RobbieGTutor@gmail.com')
-];
+interface ContactsProps {
+  contacts: Contact[];
+}
 
 function labelDisplayedRows({
   from,
@@ -97,8 +84,7 @@ function getComparator<Key extends keyof any>(
         ? descendingComparator(orderBy, a, b)
         : -descendingComparator(orderBy, a, b);
     };
-  }
-  
+}
 
 function stableSort<T>(array: readonly T[], comparator: (a?: T, b?: T) => number) {
   const stabilizedThis = array.map((el, index) => [el, index] as [T, number]);
@@ -112,193 +98,15 @@ function stableSort<T>(array: readonly T[], comparator: (a?: T, b?: T) => number
   return stabilizedThis.map((el) => el[0]);
 }
 
-interface HeadCell {
-  disablePadding: boolean;
-  id: keyof Data;
-  label: string;
-  numeric: boolean;
-}
-
-const headCells: readonly HeadCell[] = [
-  {
-    id: 'name',
-    numeric: false,
-    disablePadding: true,
-    label: 'Name',
-  },
-  {
-    id: 'email',
-    numeric: true,
-    disablePadding: false,
-    label: 'Primary Email',
-  },
-  {
-    id: 'phoneNumber',
-    numeric: true,
-    disablePadding: false,
-    label: 'Phone Number',
-  },
-  {
-    id: 'secondaryEmail',
-    numeric: true,
-    disablePadding: false,
-    label: 'Secondary Email',
-  },
-  {
-    id: 'tertiaryEmail',
-    numeric: true,
-    disablePadding: false,
-    label: 'Tertiary Email',
-  },
-];
-
-interface EnhancedTableProps {
-  numSelected: number;
-  onRequestSort: (event: React.MouseEvent<unknown>, property: keyof Data) => void;
-  onSelectAllClick: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  order: Order;
-  orderBy: string;
-  rowCount: number;
-}
-
-function EnhancedTableHead(props: EnhancedTableProps) {
-  const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } =
-    props;
-  const createSortHandler =
-    (property: keyof Data) => (event: React.MouseEvent<unknown>) => {
-      onRequestSort(event, property);
-    };
-
-  return (
-    <thead>
-      <tr>
-        <th>
-          <Checkbox
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-            slotProps={{
-              input: {
-                'aria-label': 'select all desserts',
-              },
-            }}
-            sx={{ verticalAlign: 'sub' }}
-          />
-        </th>
-        {headCells.map((headCell) => {
-          const active = orderBy === headCell.id;
-          return (
-            <th
-              key={headCell.id}
-              aria-sort={
-                active
-                  ? ({ asc: 'ascending', desc: 'descending' } as const)[order]
-                  : undefined
-              }
-            >
-              {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-              <Link
-                underline="none"
-                color="neutral"
-                textColor={active ? 'primary' : undefined}
-                component="button"
-                onClick={createSortHandler(headCell.id)}
-                fontWeight="lg"
-                startDecorator={
-                  headCell.numeric ? (
-                    <ArrowDownwardIcon sx={{ opacity: active ? 1 : 0 }} />
-                  ) : null
-                }
-                endDecorator={
-                  !headCell.numeric ? (
-                    <ArrowDownwardIcon sx={{ opacity: active ? 1 : 0 }} />
-                  ) : null
-                }
-                sx={{
-                  '& svg': {
-                    transition: '0.2s',
-                    transform:
-                      active && order === 'desc' ? 'rotate(0deg)' : 'rotate(180deg)',
-                  },
-                  '&:hover': { '& svg': { opacity: 1 } },
-                }}
-              >
-                {headCell.label}
-                {active ? (
-                  <Box component="span" sx={visuallyHidden}>
-                    {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                  </Box>
-                ) : null}
-              </Link>
-            </th>
-          );
-        })}
-      </tr>
-    </thead>
-  );
-}
-
-interface EnhancedTableToolbarProps {
-  numSelected: number;
-}
-
-function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
-  const { numSelected } = props;
-
-  return (
-
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        py: 1,
-        pl: { sm: 2 },
-        pr: { xs: 1, sm: 1 },
-        ...(numSelected > 0 && {
-          bgcolor: 'background',
-        }),
-        borderTopLeftRadius: 'var(--unstable_actionRadius)',
-        borderTopRightRadius: 'var(--unstable_actionRadius)',
-      }}
-    >
-      {numSelected > 0 ? (
-        <Typography sx={{ flex: '1 1 100%' }} component="div">
-          {numSelected} selected
-        </Typography>
-      ) : (
-        <Typography
-          level="h6"
-          sx={{ flex: '1 1 100%' }}
-          id="tableTitle"
-          component="div"
-        >
-          Nutrition
-        </Typography>
-      )} 
-
-      {numSelected > 0 ? (
-        <Tooltip title="Delete">
-          <IconButton  size='sm' color="danger" variant="solid">
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      ) : (
-        <Tooltip title="Filter list">
-          <IconButton size='sm' variant="outlined" color="neutral">
-            <FilterListIcon />
-          </IconButton>
-        </Tooltip>
-      )}
-    </Box>
-  );
-}
-
-export default function TableSortAndSelection() {
+export default function TableSortAndSelection({contacts, session}) {
   const [order, setOrder] = React.useState<Order>('asc');
   const [orderBy, setOrderBy] = React.useState<keyof Data>('name');
   const [selected, setSelected] = React.useState<readonly string[]>([]);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
+
+
+  const rows = contacts; 
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
@@ -359,17 +167,17 @@ export default function TableSortAndSelection() {
   const isSelected = (name: string) => selected.indexOf(name) !== -1;
 
   // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
 
   return (
+    <Layout>
     <StyledEngineProvider injectFirst>
     <CssVarsProvider>
     <Sheet
           variant="outlined"
-          sx={{ width: "100%", boxShadow: "sm", borderRadius: "sm" }}
+          sx={{ display:'inline-block', marginLeft: '50px', marginRight: '50px', boxShadow: "sm", borderRadius: "sm", justifyContent: "center" }}
         >
-      <EnhancedTableToolbar numSelected={selected.length} />
+      <ImportContactToolbar numSelected={selected.length} />
       <Table
         aria-labelledby="tableTitle"
         hoverRow
@@ -386,7 +194,7 @@ export default function TableSortAndSelection() {
           '& tr > *:nth-child(n+3)': { textAlign: 'right' },
         }}
       >
-        <EnhancedTableHead
+        <ImportContactTableHead
           numSelected={selected.length}
           order={order}
           orderBy={orderBy}
@@ -466,7 +274,7 @@ export default function TableSortAndSelection() {
               >
                 <FormControl orientation="horizontal" size="sm">
                   <FormLabel>Rows per page:</FormLabel>
-                  <Select onChange={handleChangeRowsPerPage} value={rowsPerPage}>
+                  <Select onChange={handleChangeRowsPerPage} id="select-rows-page" defaultValue={rowsPerPage} >
                     <Option value={5}>5</Option>
                     <Option value={10}>10</Option>
                     <Option value={25}>25</Option>
@@ -491,16 +299,16 @@ export default function TableSortAndSelection() {
                     <KeyboardArrowLeftIcon />
                   </IconButton>
                   <IconButton
-                    // size="sm"
-                    // color="neutral"
-                    // variant="outlined"
+                    size="sm"
+                    color="neutral"
+                    variant="outlined"
                     disabled={
                       rows.length !== -1
                         ? page >= Math.ceil(rows.length / rowsPerPage) - 1
                         : false
                     }
                     onClick={() => handleChangePage(page + 1)}
-                    // sx={{ bgcolor: 'background' }}
+                    sx={{ bgcolor: 'background' }}
                   >
                     <KeyboardArrowRightIcon />
                   </IconButton>
@@ -513,5 +321,77 @@ export default function TableSortAndSelection() {
     </Sheet>
       </CssVarsProvider>
       </StyledEngineProvider >
+      </Layout>
   );
+
+
+  
+
+}
+
+export const getServerSideProps = async ({ req, res }) => {
+  const session = await getSession({ req });
+
+  if (!session) {
+    res.statusCode = 403;
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      }
+    };
+  }
+  const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+  oauth2Client.setCredentials({ refresh_token: session.googleRefreshToken });
+
+  const people = google.people({ version: 'v1', auth: oauth2Client });
+
+  const fetchContacts = async () => {
+    const contacts: Contact[] = [];
+    let nextPageToken: string | undefined;
+    do {
+      const response = await people.people.connections.list({
+        resourceName: 'people/me',
+        pageSize: 1000,
+        personFields: 'names,emailAddresses,phoneNumbers',
+        pageToken: nextPageToken,
+      });
+
+      nextPageToken = response.data.nextPageToken;
+
+      if (response.data.connections) {
+        contacts.push(...response.data.connections);
+      }
+    } while (nextPageToken);
+
+    return contacts;
+  };
+  const data = await fetchContacts();
+  const formattedContacts = data.map((contact) => {
+    const name = contact.names ? contact.names[0].displayName : '';
+    const email = contact.emailAddresses ? contact.emailAddresses[0].value : '';
+    const phoneNumber = (contact.phoneNumbers && contact.phoneNumbers.length > 0) ? contact.phoneNumbers[0].canonicalForm : '';
+    const secondaryPhoneNumber = (contact.phoneNumbers && contact.phoneNumbers.length > 1) ? contact.phoneNumbers[1].canonicalForm : '';
+    const secondaryEmail = (contact.emailAddresses && contact.emailAddresses.length > 1) ? contact.emailAddresses[1].value : '';
+    const tertiaryEmail = (contact.emailAddresses && contact.emailAddresses.length > 2) ? contact.emailAddresses[2].value : '';
+    return {
+      name,
+      email,
+      phoneNumber,
+      secondaryPhoneNumber,
+      secondaryEmail,
+      tertiaryEmail,
+    };
+  })
+
+  const contacts = formattedContacts.filter((contact) => (typeof contact.phoneNumber === 'string' && contact.name.length > 0))
+  
+  console.log('all the contacts 2', )
+
+  return {
+    props: {
+      contacts,
+    },
+  };
+
 }
