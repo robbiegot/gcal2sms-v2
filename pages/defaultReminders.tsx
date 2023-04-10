@@ -317,8 +317,6 @@ const ConfigureReminders = ({ existingDefaults, session }) => {
 };
 
 
-
-
 export async function getServerSideProps({ req, res }) {
     const session = await getSession({ req });
     const minutesToTimeUnitWithoutUnit = (time: number) => {
