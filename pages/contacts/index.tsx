@@ -83,6 +83,7 @@ export default function ContactsGrid({ contacts }) {
         async (newRow: GridRowModel) => {
             try {
                 const response = await mutateRow("POST", newRow);
+                console.log("line 86 response: ", response)
                 if (!response.id) {
                     throw response;
                 }

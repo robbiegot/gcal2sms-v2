@@ -164,7 +164,7 @@ export default function TableSortAndSelection({contacts, session}) {
       : Math.min(rows.length, (page + 1) * rowsPerPage);
   };
 
-  const isSelected = (name: string) => selected.indexOf(name) !== -1;
+  const isSelected = (name: string) => selected.indexOf(name) == -1;
 
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
@@ -229,6 +229,7 @@ export default function TableSortAndSelection({contacts, session}) {
                 >
                   <th scope="row">
                     <Checkbox
+                      defaultChecked
                       checked={isItemSelected}
                       slotProps={{
                         input: {
@@ -341,11 +342,10 @@ export const getServerSideProps = async ({ req, res }) => {
       }
     };
   }
+
   const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
   oauth2Client.setCredentials({ refresh_token: session.googleRefreshToken });
-
   const people = google.people({ version: 'v1', auth: oauth2Client });
-
   const fetchContacts = async () => {
     const contacts: Contact[] = [];
     let nextPageToken: string | undefined;
@@ -366,7 +366,9 @@ export const getServerSideProps = async ({ req, res }) => {
 
     return contacts;
   };
+  
   const data = await fetchContacts();
+  
   const formattedContacts = data.map((contact) => {
     const name = contact.names ? contact.names[0].displayName : '';
     const email = contact.emailAddresses ? contact.emailAddresses[0].value : '';
@@ -384,13 +386,15 @@ export const getServerSideProps = async ({ req, res }) => {
     };
   })
 
-  const contacts = formattedContacts.filter((contact) => (typeof contact.phoneNumber === 'string' && contact.name.length > 0))
+  const contacts = formattedContacts.filter((contact) => (
+    typeof contact.phoneNumber === 'string' 
+    && contact.name.length > 0 
+    && contact.email.length > 0
+    && contact.phoneNumber.length > 0))
   
-  console.log('all the contacts 2', )
-
   return {
     props: {
-      contacts,
+      contacts
     },
   };
 
