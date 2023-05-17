@@ -2,6 +2,7 @@ import Checkbox from '@mui/joy/Checkbox';
 import Link from '@mui/joy/Link';
 import Tooltip from '@mui/joy/Tooltip';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { visuallyHidden } from "@mui/utils";
@@ -48,15 +49,15 @@ export function ImportContactToolbar(props: ImportContactToolbarProps) {
         )} 
   
         {numSelected > 0 ? (
-          <Tooltip title="Delete">
-            <IconButton  size='sm' color="danger" variant="solid">
-              <DeleteIcon />
+          <Tooltip title="Import Contacts">
+            <IconButton  size='lg' color="success" variant="solid" sx={{ display: 'flex', fontSize:'1rem', padding: '10px'}}>
+              Add {numSelected} selected Contacts
             </IconButton>
           </Tooltip>
         ) : (
           <Tooltip title="Filter list">
             <IconButton size='sm' variant="outlined" color="neutral">
-              <FilterListIcon />
+              Select Contacts to Import
             </IconButton>
           </Tooltip>
         )}

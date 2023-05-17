@@ -10,7 +10,6 @@ import IconButton from '@mui/joy/IconButton';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
-import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { StyledEngineProvider, CssVarsProvider } from '@mui/joy/styles';
 import Layout from '../../components/Layout';
@@ -99,14 +98,16 @@ function stableSort<T>(array: readonly T[], comparator: (a?: T, b?: T) => number
 }
 
 export default function TableSortAndSelection({contacts, session}) {
+  const rows = contacts; 
+
   const [order, setOrder] = React.useState<Order>('asc');
   const [orderBy, setOrderBy] = React.useState<keyof Data>('name');
-  const [selected, setSelected] = React.useState<readonly string[]>([]);
+  const [selected, setSelected] = React.useState<readonly string[]>(rows.map((n) => n.name));
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
 
-  const rows = contacts; 
+
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
@@ -164,10 +165,11 @@ export default function TableSortAndSelection({contacts, session}) {
       : Math.min(rows.length, (page + 1) * rowsPerPage);
   };
 
-  const isSelected = (name: string) => selected.indexOf(name) == -1;
+  const isSelected = (name: string) => selected.indexOf(name) !== -1;
 
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+
 
   return (
     <Layout>
@@ -216,6 +218,7 @@ export default function TableSortAndSelection({contacts, session}) {
                   aria-checked={isItemSelected}
                   tabIndex={-1}
                   key={row.name}
+
                   style={
                     isItemSelected
                       ? ({
@@ -229,7 +232,7 @@ export default function TableSortAndSelection({contacts, session}) {
                 >
                   <th scope="row">
                     <Checkbox
-                      defaultChecked
+ 
                       checked={isItemSelected}
                       slotProps={{
                         input: {
